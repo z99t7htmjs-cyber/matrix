@@ -1,0 +1,639 @@
+<title>Matrix Living Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wght@300;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#020817;
+  --panel:rgba(5,18,46,.62);
+  --panel-edge:rgba(120,190,255,.16);
+  --text:#e6f1ff;
+  --dim:#8fa9cc;
+  --faint:#58739a;
+  --accent:#5fd4ff;
+  --gold:#f5d27a;
+  --crit:#ff4d6d;
+  --warn:#ffc93d;
+  --ok:#3ddc84;
+  --display:'Saira',"Segoe UI",system-ui,sans-serif;
+  --body:'IBM Plex Sans',"Segoe UI",system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 var(--body);overflow:hidden}
+#flow{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.app{position:relative;z-index:1;height:100%;box-sizing:border-box;display:grid;grid-template-columns:260px minmax(0,1fr) 340px;grid-template-rows:minmax(0,1fr) auto;gap:16px 24px;padding-inline:24px;padding-block:20px}
+.panel{background:none;border:0}
+.app{text-shadow:0 1px 10px rgba(2,8,23,.95),0 0 2px rgba(2,8,23,.8)}
+.label{font:500 11px/1 var(--display);letter-spacing:.28em;text-transform:uppercase;color:var(--dim)}
+
+/* left */
+.left{grid-row:1 / span 2;display:flex;flex-direction:column;gap:18px;min-height:0}
+.brand{display:flex;flex-direction:column;gap:6px;padding:4px 4px 0}
+.brand h1{margin:0;font:700 26px/1 var(--display);letter-spacing:.42em;color:#fff;text-shadow:0 0 18px rgba(95,212,255,.7)}
+.brand p{margin:0;font-size:12px;color:var(--dim)}
+.status{display:flex;align-items:center;gap:8px;font:500 12px var(--mono);color:var(--dim)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+nav.views{display:flex;flex-direction:column;gap:2px;padding:4px 0}
+nav.views button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;min-height:36px;padding:0 12px;border-radius:9px;cursor:pointer;font:500 12px var(--display);letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
+nav.views button::before{content:"";width:10px;height:10px;border-radius:50%;border:1.5px solid currentColor;flex:none}
+nav.views button:hover{color:var(--text);background:rgba(95,212,255,.06)}
+nav.views button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav.views button[aria-current="true"]{color:#fff}
+nav.views button[aria-current="true"]::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent)}
+.sys{padding:4px;display:flex;flex-direction:column;gap:10px}
+.meter{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:baseline}
+.meter span{font-size:12px;color:var(--dim)}
+.meter b{font:500 13px var(--mono);font-variant-numeric:tabular-nums;color:var(--text)}
+.bar{grid-column:1 / -1;height:3px;border-radius:2px;background:rgba(143,169,204,.16);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);box-shadow:0 0 8px var(--accent);transition:width .8s ease}
+.bar.warn i{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.legend{position:absolute;left:0;bottom:0;max-width:250px;padding:0;display:flex;flex-direction:column;gap:8px}
+.legend p{margin:0;font-size:12px;color:var(--dim)}
+.legend ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.legend li{display:flex;align-items:center;gap:7px;font-size:12px}
+.legend li i{width:8px;height:8px;border-radius:50%;flex:none}
+
+/* scene */
+.scene{position:relative;min-height:0;min-width:0}
+#core{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:default}
+.scene-head{position:absolute;left:0;top:0;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+.scene-head strong{font:300 30px/1 var(--display);letter-spacing:.12em;color:#fff}
+.scene-head span{font:500 12px var(--mono);color:var(--dim)}
+.demo{position:absolute;right:0;top:0;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.chipbtn{all:unset;box-sizing:border-box;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--panel-edge);background:none;font:500 12px var(--body);color:var(--dim);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chipbtn:hover{color:#fff;border-color:rgba(95,212,255,.5)}
+.chipbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.banner{position:absolute;left:50%;top:56px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:12px;background:rgba(80,8,24,.8);border:1px solid var(--crit);box-shadow:0 0 40px rgba(255,77,109,.35);white-space:nowrap}
+.banner b{font:700 12px var(--display);letter-spacing:.3em;color:var(--crit)}
+.banner span{font-size:14px}
+.banner button{all:unset;text-shadow:none;box-sizing:border-box;min-height:34px;padding:0 12px;border-radius:8px;background:var(--crit);color:#1a0006;font-weight:600;cursor:pointer}
+.banner button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* right */
+.right{grid-row:1 / span 2;grid-column:3;display:flex;flex-direction:column;gap:14px;min-height:0}
+.advisor{padding:4px;display:flex;flex-direction:column;gap:10px}
+.item{border-radius:0;padding:10px 4px 10px 16px;border:0;background:none;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.item::before{content:"";position:absolute;left:2px;top:15px;width:7px;height:7px;border-radius:50%;background:var(--sev);box-shadow:0 0 10px var(--sev)}
+.item .sev{font:600 10px var(--display);letter-spacing:.28em;color:var(--sev)}
+.item h3{margin:0;font:600 15px/1.25 var(--body);color:#fff}
+.item p{margin:0;font-size:12px;color:var(--dim)}
+.item .acts{display:flex;gap:6px;margin-top:2px}
+.item .acts button{all:unset;box-sizing:border-box;min-height:32px;padding:0 12px;border-radius:999px;font:500 12px var(--body);cursor:pointer;border:1px solid rgba(143,169,204,.3);color:var(--text);text-shadow:none}
+.item .acts button.primary{background:var(--sev);border-color:var(--sev);color:#12060a;font-weight:600}
+.item .acts button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.item.crit{--sev:var(--crit);background:radial-gradient(ellipse 70% 90% at 10% 40%,rgba(255,77,109,.16),rgba(255,77,109,0) 100%)}
+.item.warn{--sev:var(--warn)}
+.item.fyi{--sev:var(--faint)}
+.item.flash{animation:flash 1.2s ease-in-out infinite}
+@keyframes flash{50%{background-color:rgba(255,77,109,.06)}}
+.events{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px 0 0}
+.events header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px 10px}
+.filter{all:unset;cursor:pointer;font:500 11px var(--mono);color:var(--accent)}
+.filter:focus-visible{outline:2px solid var(--accent)}
+#feed{list-style:none;margin:0;padding:0 4px 14px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:2px;mask-image:linear-gradient(#000 80%,transparent)}
+#feed li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:7px 0;animation:in .6s ease}
+#feed time{font:400 11px var(--mono);color:var(--faint);font-variant-numeric:tabular-nums;padding-top:2px}
+#feed .tag{font:600 10px var(--display);letter-spacing:.24em;text-transform:uppercase}
+#feed .txt{grid-column:2;font-size:13px;color:var(--text)}
+@keyframes in{from{opacity:0;transform:translateY(-6px)}}
+
+/* dock */
+.dock{grid-column:2;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.3fr);gap:16px;align-items:center;padding:8px 0}
+.task{display:flex;align-items:center;gap:12px;min-width:0}
+.task svg{flex:none}
+.task div{min-width:0}
+.task .label{display:block;margin-bottom:4px}
+#taskText{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.voice{display:flex;flex-direction:column;align-items:center;gap:4px}
+#wave{display:flex;align-items:center;gap:3px;height:34px}
+#wave i{width:3px;border-radius:2px;background:var(--accent);box-shadow:0 0 6px var(--accent);height:4px}
+.voice small{font:500 10px var(--display);letter-spacing:.3em;color:var(--dim)}
+form.ask{display:flex;gap:8px}
+form.ask label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+form.ask input{flex:1;min-width:0;min-height:40px;box-sizing:border-box;padding:0 14px;border-radius:999px;border:1px solid var(--panel-edge);background:rgba(2,8,23,.35);color:var(--text);font:14px var(--body)}
+form.ask input:focus{outline:2px solid var(--accent);outline-offset:1px}
+form.ask button{all:unset;text-shadow:none;box-sizing:border-box;min-height:40px;padding:0 18px;border-radius:999px;background:var(--accent);color:#021024;font-weight:600;cursor:pointer}
+form.ask button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:5;padding:10px 16px;border-radius:10px;background:rgba(5,18,46,.95);border:1px solid var(--panel-edge);font-size:13px}
+
+body.alert{--accent:#ff6b85}
+body.alert .brand h1{text-shadow:0 0 18px rgba(255,77,109,.8)}
+body.alert .dot{background:var(--crit);box-shadow:0 0 10px var(--crit)}
+
+@media (max-width: 1100px){
+  body{overflow:auto}
+  .app{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .left,.right,.dock{grid-row:auto;grid-column:auto}
+  .scene{height:520px}
+  .right{max-height:none}
+  #feed{max-height:360px}
+}
+@media (max-width: 640px){
+  .scene{height:440px}
+  .legend{display:none}
+  .dock{grid-template-columns:minmax(0,1fr)}
+  .voice{flex-direction:row;justify-content:center}
+  .banner{white-space:normal;width:calc(100% - 16px);flex-wrap:wrap}
+  .scene-head strong{font-size:22px}
+}
+</style>
+
+<canvas id="flow" aria-hidden="true"></canvas>
+<div class="app">
+  <aside class="left">
+    <div class="brand">
+      <h1>MATRIX</h1>
+      <p>Command center for your PC and home network</p>
+      <div class="status"><span class="dot"></span><span id="statusText">Watching · ROG STRIX</span></div>
+    </div>
+    <nav class="views panel" aria-label="Views">
+      <button type="button" data-view="overview" aria-current="true">Overview</button>
+      <button type="button" data-view="network">Network</button>
+      <button type="button" data-view="system">Performance</button>
+      <button type="button" data-view="security">Security</button>
+      <button type="button" data-view="crashes">Crashes</button>
+      <button type="button" data-view="tuneup">Tune-up</button>
+      <button type="button" data-view="timeline">Timeline</button>
+      <button type="button" data-view="settings">Settings</button>
+    </nav>
+    <section class="sys panel" aria-label="System">
+      <span class="label">System</span>
+      <div class="meter"><span>CPU</span><b id="m-cpu">34%</b><div class="bar"><i id="b-cpu"></i></div></div>
+      <div class="meter"><span>GPU · RTX 5070</span><b id="m-gpu">52%</b><div class="bar"><i id="b-gpu"></i></div></div>
+      <div class="meter"><span>GPU temperature</span><b id="m-temp">61°C</b><div class="bar"><i id="b-temp"></i></div></div>
+      <div class="meter"><span>Memory</span><b id="m-mem">58%</b><div class="bar"><i id="b-mem"></i></div></div>
+      <div class="meter"><span>Disk C:</span><b id="m-disk">71%</b><div class="bar warn"><i id="b-disk"></i></div></div>
+      <div class="meter"><span>Network ↓</span><b id="m-net">1.2 MB/s</b><div class="bar"><i id="b-net"></i></div></div>
+    </section>
+  </aside>
+
+  <main class="scene" id="scene">
+    <canvas id="core" role="img" aria-label="Your PC as a sphere of recent readings, with Network, Performance, Security, Crashes, Tune-up and Matrix AI orbiting it"></canvas>
+    <div class="scene-head">
+      <strong id="headline">ALL WATCHED</strong>
+      <span id="subline">6 devices · 0 crashes this week · concept demo, sample data</span>
+    </div>
+    <div class="demo">
+      <button type="button" class="chipbtn" id="alertBtn">Demo red alert</button>
+      <button type="button" class="chipbtn" id="motionBtn">Pause motion</button>
+    </div>
+    <section class="legend panel" aria-label="What the particles are">
+      <p>Each particle is one reading Matrix took in the last hour, colored by where it came from.</p>
+      <ul id="legend"></ul>
+    </section>
+    <div class="banner" id="banner" hidden>
+      <b>RED ALERT</b><span>Real-time virus protection is off</span>
+      <button type="button" id="endAlert">Turn it back on</button>
+    </div>
+  </main>
+
+  <aside class="right">
+    <section class="advisor panel" aria-label="Advisor">
+      <span class="label">Advisor</span>
+      <div id="advisorList">
+        <article class="item crit flash">
+          <span class="sev">CRITICAL · NEW</span>
+          <h3>A new device joined your network</h3>
+          <p>Unlisted maker · joined 3 min ago</p>
+          <div class="acts"><button type="button" class="primary" data-toast="Identifying… (in the real app this probes the device)">Identify</button><button type="button" data-toast="Snoozed for a day">Snooze</button></div>
+        </article>
+      </div>
+      <article class="item warn">
+        <span class="sev">ATTENTION</span>
+        <h3>Restart to finish updates</h3>
+        <p>Waiting since Thursday</p>
+        <div class="acts"><button type="button" data-toast="Checked again: still waiting for a restart">Check again</button></div>
+      </article>
+      <article class="item fyi">
+        <span class="sev">FYI</span>
+        <h3>Defender removed a threat yesterday</h3>
+      </article>
+    </section>
+    <section class="events panel" aria-label="Live events">
+      <header><span class="label">Live events</span><button type="button" class="filter" id="filterBtn" hidden></button></header>
+      <ol id="feed" aria-live="polite"></ol>
+    </section>
+  </aside>
+
+  <footer class="dock panel">
+    <div class="task">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="none" stroke="#5fd4ff" stroke-opacity=".5"></circle><circle cx="17" cy="17" r="6" fill="#5fd4ff"></circle></svg>
+      <div><span class="label">Current task</span><div id="taskText">Watching your network · 6 devices</div></div>
+    </div>
+    <div class="voice"><div id="wave" aria-hidden="true"></div><small id="voiceLabel">IDLE</small></div>
+    <form class="ask" id="askForm">
+      <label for="askInput">Ask Matrix</label>
+      <input id="askInput" type="text" placeholder="Ask Matrix about your PC…" autocomplete="off">
+      <button type="submit">Ask</button>
+    </form>
+  </footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const AREAS = {
+  network:{label:'Network', color:'#5fd4ff', status:'6 devices · 1 new', weight:.3},
+  system:{label:'Performance', color:'#36e2b4', status:'CPU 34% · 61°C', weight:.25},
+  security:{label:'Security', color:'#8c9bff', status:'All shields on', weight:.12},
+  crashes:{label:'Crashes', color:'#c792ff', status:'None in 7 days', weight:.08},
+  tuneup:{label:'Tune-up', color:'#ff9ecf', status:'3 ideas', weight:.1},
+  ai:{label:'Matrix AI', color:'#f5d27a', status:'qwen3 · idle', weight:.15}
+};
+const ORDER = ['network','system','security','crashes','tuneup','ai'];
+const ANGLES = [-120,-60,0,60,120,180].map(a => a*Math.PI/180);
+const CRIT = '#ff4d6d';
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const state = {running: !reduced, alert:false, filter:null, t:0, boost:0, speak:0.2, hover:null};
+
+// legend
+const legend = document.getElementById('legend');
+ORDER.forEach(k => { const li = document.createElement('li'); li.innerHTML = '<i style="background:'+AREAS[k].color+';box-shadow:0 0 8px '+AREAS[k].color+'"></i>'+AREAS[k].label; legend.appendChild(li); });
+
+// ---------- background flow ----------
+const flow = document.getElementById('flow'), fx = flow.getContext('2d');
+const core = document.getElementById('core'), cx2 = core.getContext('2d');
+const scene = document.getElementById('scene');
+let FW=0, FH=0, DPR=1, strands=[], traces=[], focus={x:0,y:0};
+
+function rnd(a,b){return a+Math.random()*(b-a)}
+function buildFlow(){
+  strands = [];
+  const n = FW < 700 ? 11 : 18;
+  for(let i=0;i<n;i++){
+    strands.push({
+      y0: FH*(.06 + .88*(i+rnd(-.3,.3))/n), A: rnd(30,90), f: rnd(.0018,.0035), f2: rnd(.004,.007),
+      sp: rnd(.5,1.0), sp2: rnd(.3,.6), ph: rnd(0,6.28), pull: rnd(.35,.85),
+      fibers: FW < 700 ? 5 : 7, spread: rnd(3,7), tw: rnd(.1,.22),
+      col: Math.random()<.1 ? '#f5d27a' : (Math.random()<.18 ? '#8c9bff' : '#5fd4ff')
+    });
+  }
+  traces = [];
+  for(let i=0;i<8;i++){
+    const left = i%2===0, y = FH*rnd(.12,.9);
+    const x0 = left ? rnd(8,40) : FW-rnd(8,40);
+    const dir = left ? 1 : -1, l1 = rnd(60,160), d = rnd(18,40)*(Math.random()<.5?-1:1), l2 = rnd(40,120);
+    traces.push({pts:[[x0,y],[x0+dir*l1,y],[x0+dir*(l1+Math.abs(d)),y+d],[x0+dir*(l1+Math.abs(d)+l2),y+d]], ph: rnd(0,6)});
+  }
+}
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 1.5);
+  FW = innerWidth; FH = innerHeight;
+  flow.width = FW*DPR; flow.height = FH*DPR; fx.setTransform(DPR,0,0,DPR,0,0);
+  const r = scene.getBoundingClientRect();
+  core.width = Math.max(1,r.width*DPR); core.height = Math.max(1,r.height*DPR); cx2.setTransform(DPR,0,0,DPR,0,0);
+  buildFlow(); buildParticles();
+}
+
+function drawFlow(t){
+  const r = scene.getBoundingClientRect();
+  focus.x = r.left + r.width/2; focus.y = r.top + r.height/2;
+  const g = fx.createRadialGradient(focus.x, focus.y, 0, focus.x, focus.y, Math.max(FW,FH)*.75);
+  if(state.alert){ g.addColorStop(0,'#3a0c22'); g.addColorStop(.45,'#1a0614'); g.addColorStop(1,'#07020a'); }
+  else { g.addColorStop(0,'#0c3486'); g.addColorStop(.45,'#061a4c'); g.addColorStop(1,'#020817'); }
+  fx.globalCompositeOperation='source-over'; fx.fillStyle = g; fx.fillRect(0,0,FW,FH);
+
+  // circuit traces
+  fx.lineWidth = 1;
+  traces.forEach(tr => {
+    fx.strokeStyle = state.alert ? 'rgba(255,77,109,.22)' : 'rgba(95,212,255,.22)';
+    fx.beginPath(); tr.pts.forEach((p,i)=> i? fx.lineTo(p[0],p[1]) : fx.moveTo(p[0],p[1])); fx.stroke();
+    const e = tr.pts[tr.pts.length-1], a = .4 + .6*(.5+.5*Math.sin(t*1.5+tr.ph));
+    fx.fillStyle = state.alert ? 'rgba(255,107,133,'+a+')' : 'rgba(140,225,255,'+a+')';
+    fx.beginPath(); fx.arc(e[0],e[1],2.5,0,6.283); fx.fill();
+  });
+
+  // soft darkening behind the side columns instead of boxes
+  if(FW > 1100){
+    let v = fx.createLinearGradient(0,0,340,0); v.addColorStop(0,'rgba(2,8,23,.55)'); v.addColorStop(1,'rgba(2,8,23,0)');
+    fx.fillStyle = v; fx.fillRect(0,0,340,FH);
+    v = fx.createLinearGradient(FW,0,FW-420,0); v.addColorStop(0,'rgba(2,8,23,.6)'); v.addColorStop(1,'rgba(2,8,23,0)');
+    fx.fillStyle = v; fx.fillRect(FW-420,0,420,FH);
+  }
+
+  fx.globalCompositeOperation='lighter';
+  const step = 14, sig = FW*.22, ts = state.alert ? 1.7 : 1;
+  strands.forEach((s,si) => {
+    const col = state.alert ? '#ff4d6d' : s.col;
+    fx.strokeStyle = col; fx.lineWidth = 1;
+    for(let j=0;j<s.fibers;j++){
+      const o = j - (s.fibers-1)/2;
+      fx.globalAlpha = .07 + .1*(1 - Math.abs(o)/s.fibers);
+      fx.beginPath();
+      for(let x=-40; x<=FW+40; x+=step){
+        const wave = x*s.f - t*s.sp*ts + s.ph + o*s.tw;
+        let y = s.y0 + s.A*Math.sin(wave) + s.A*.4*Math.sin(x*s.f2 - t*s.sp2*ts + si + o*s.tw*1.5);
+        y += o*s.spread*(.6 + .6*Math.sin(x*.003 - t*.6*ts + si));
+        const d = (x-focus.x)/sig, w = Math.exp(-d*d)*s.pull;
+        y += (focus.y + (s.y0-FH/2)*.12 - y)*w;
+        x < -39 ? fx.moveTo(x,y) : fx.lineTo(x,y);
+      }
+      fx.stroke();
+    }
+  });
+  fx.globalAlpha = 1; fx.globalCompositeOperation='source-over';
+}
+
+// ---------- core ----------
+let particles = [], byColor = {}, sats = [], comets = [];
+function coreGeom(){
+  const W = core.width/DPR, H = core.height/DPR;
+  const R = Math.max(60, Math.min(W*.19, H*.28));
+  return {W,H,R,cx:W/2,cy:H/2 + H*.02};
+}
+function buildParticles(){
+  const {R} = coreGeom();
+  const N = Math.round(4200*Math.min(1, R/150));
+  particles = []; byColor = {};
+  const keys = ORDER, cum = []; let acc=0; keys.forEach(k=>{acc+=AREAS[k].weight; cum.push(acc);});
+  for(let i=0;i<N;i++){
+    const u = Math.random()*acc; let ci = cum.findIndex(c=>u<=c); if(ci<0) ci=0;
+    const r = .06 + .94*Math.pow(Math.random(), .65);
+    const th = Math.random()*6.283, ph = Math.acos(2*Math.random()-1);
+    const p = {x:r*Math.sin(ph)*Math.cos(th), y:r*Math.cos(ph)*.92, z:r*Math.sin(ph)*Math.sin(th), s:Math.random(), tw:Math.random()*6.28, c:keys[ci]};
+    particles.push(p); (byColor[p.c] = byColor[p.c] || []).push(p);
+  }
+}
+function arc(ctx,x,y,r,a0,a1){ctx.beginPath();ctx.arc(x,y,r,a0,a1);ctx.stroke();}
+function satPositions(G,t){
+  return ORDER.map((k,i)=>{
+    const a = ANGLES[i] + Math.sin(t*.15+i)*.04;
+    const rx = Math.min(G.R*1.65, G.W/2 - 150), ry = Math.min(G.R*1.42, G.H/2 - 40);
+    return {k, a, x:G.cx + Math.cos(a)*Math.max(G.R*1.25,rx), y:G.cy + Math.sin(a)*Math.max(G.R*1.2,ry)};
+  });
+}
+function drawCore(t, dt){
+  const G = coreGeom(), {W,H,R,cx,cy} = G, ctx = cx2;
+  ctx.clearRect(0,0,W,H);
+  const spd = state.alert ? 2.6 : 1;
+  const ay = t*.12*spd, ax = .38 + Math.sin(t*.1)*.08;
+  const cyA = Math.cos(ay), syA = Math.sin(ay), cxA = Math.cos(ax), sxA = Math.sin(ax);
+  const f = 3.2;
+  ctx.globalCompositeOperation='lighter';
+
+  // glow
+  state.boost *= .96;
+  const pulse = 1 + .08*Math.sin(t*2) + state.boost;
+  let g = ctx.createRadialGradient(cx,cy,0,cx,cy,R*1.05*pulse);
+  if(state.alert){ g.addColorStop(0,'rgba(255,220,228,.85)'); g.addColorStop(.25,'rgba(255,77,109,.45)'); g.addColorStop(1,'rgba(255,77,109,0)'); }
+  else { g.addColorStop(0,'rgba(255,255,255,.85)'); g.addColorStop(.22,'rgba(150,230,255,.45)'); g.addColorStop(.6,'rgba(40,120,255,.12)'); g.addColorStop(1,'rgba(40,120,255,0)'); }
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx,cy,R*1.1*pulse,0,6.283); ctx.fill();
+
+  // particles
+  ORDER.forEach(k => {
+    const list = byColor[k]; if(!list) return;
+    ctx.fillStyle = state.alert ? (k==='ai'||k==='security' ? '#ffd0d8' : CRIT) : AREAS[k].color;
+    const dim = state.filter && state.filter!==k ? .18 : 1;
+    for(const p of list){
+      let x = p.x*cyA - p.z*syA, z = p.x*syA + p.z*cyA;
+      let y = p.y*cxA - z*sxA; z = p.y*sxA + z*cxA;
+      const sc = f/(f - z);
+      const px = cx + x*R*sc, py = cy + y*R*sc;
+      const tw = .6 + .4*Math.sin(t*2 + p.tw);
+      ctx.globalAlpha = Math.min(1,(.4 + .6*(z+1)/2)*tw*dim);
+      const s = (1.1 + p.s*1.8)*sc;
+      ctx.fillRect(px - s/2, py - s/2, s, s);
+    }
+  });
+  ctx.globalAlpha = 1;
+
+  // energy ribbons
+  for(let k=0;k<3;k++){
+    ctx.strokeStyle = state.alert ? 'rgba(255,120,140,.45)' : (k===1 ? 'rgba(245,210,122,.35)' : 'rgba(140,225,255,.4)');
+    ctx.lineWidth = k===0 ? 1.6 : 1;
+    ctx.beginPath();
+    for(let i=0;i<=60;i++){
+      const s = -1 + i/30;
+      const phi = s*Math.PI*.9 + t*.7*spd + k*2.1;
+      let x = .78*s, y = .32*Math.sin(phi), z = .32*Math.cos(phi);
+      let X = x*cyA - z*syA, Z = x*syA + z*cyA; let Y = y*cxA - Z*sxA; Z = y*sxA + Z*cxA;
+      const sc = f/(f-Z), px = cx + X*R*sc, py = cy + Y*R*sc;
+      i ? ctx.lineTo(px,py) : ctx.moveTo(px,py);
+    }
+    ctx.stroke();
+  }
+
+  // rings
+  const ring = state.alert ? CRIT : '#5fd4ff';
+  ctx.strokeStyle = ring; ctx.globalAlpha = .2; ctx.lineWidth = 1; arc(ctx,cx,cy,R*1.12,0,6.283);
+  ctx.globalAlpha = .75; ctx.lineWidth = 3;
+  const r1 = t*.15*spd;
+  [[0,.9],[1.1,2.3],[2.6,3.2],[3.5,5.6]].forEach(s=>arc(ctx,cx,cy,R*1.19,s[0]+r1,s[1]+r1));
+  ctx.strokeStyle = state.alert ? '#ffd0d8' : '#f5d27a'; ctx.lineWidth = 4; ctx.globalAlpha = .85;
+  const r2 = -t*.25*spd;
+  [[.3,.62],[3.4,3.9],[5.0,5.15]].forEach(s=>arc(ctx,cx,cy,R*1.26,s[0]+r2,s[1]+r2));
+  ctx.strokeStyle = ring; ctx.globalAlpha = .35; ctx.lineWidth = 1;
+  const r3 = -t*.05*spd; ctx.beginPath();
+  for(let i=0;i<120;i++){ const a = r3 + i*6.283/120, l = i%10===0 ? 10 : 5;
+    ctx.moveTo(cx+Math.cos(a)*R*1.33, cy+Math.sin(a)*R*1.33); ctx.lineTo(cx+Math.cos(a)*(R*1.33+l), cy+Math.sin(a)*(R*1.33+l)); }
+  ctx.stroke(); ctx.globalAlpha = 1;
+
+  // satellites
+  sats = satPositions(G,t);
+  ctx.font = '500 12px Saira, sans-serif';
+  sats.forEach((s,i) => {
+    const A = AREAS[s.k];
+    const critical = (s.k==='network' && !state.alert) || (s.k==='security' && state.alert);
+    const col = critical ? CRIT : A.color;
+    const ex = cx + Math.cos(s.a)*R*1.12, ey = cy + Math.sin(s.a)*R*1.12;
+    const mx = (ex+s.x)/2 - Math.sin(s.a)*24, my = (ey+s.y)/2 + Math.cos(s.a)*24;
+    const faded = state.filter && state.filter!==s.k;
+    ctx.globalAlpha = faded ? .12 : .4; ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.quadraticCurveTo(mx,my,s.x,s.y); ctx.stroke();
+    // data dot travelling inward
+    const p = ((t*.35 + i*.21) % 1), q = 1-p;
+    const dx = q*q*s.x + 2*q*p*mx + p*p*ex, dy = q*q*s.y + 2*q*p*my + p*p*ey;
+    ctx.globalAlpha = faded ? .2 : .9; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(dx,dy,2,0,6.283); ctx.fill();
+    // node
+    const hot = state.hover===s.k || state.filter===s.k;
+    ctx.globalAlpha = faded ? .3 : 1;
+    ctx.lineWidth = 1.5; ctx.strokeStyle = col; arc(ctx,s.x,s.y,hot?15:12,0,6.283);
+    ctx.lineWidth = 2; const ra = t*(critical?2.5:.8) + i;
+    arc(ctx,s.x,s.y,hot?21:18,ra,ra+1.4);
+    if(critical){ const pr = (t*1.2)%1; ctx.globalAlpha = (1-pr)*.8; ctx.lineWidth=1; arc(ctx,s.x,s.y,14+pr*26,0,6.283); ctx.globalAlpha = 1; }
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(s.x,s.y,4.5,0,6.283); ctx.fill();
+    // label
+    ctx.globalCompositeOperation='source-over';
+    const right = Math.cos(s.a) > -.2;
+    ctx.textAlign = right ? 'left' : 'right';
+    const lx = s.x + (right ? 28 : -28);
+    ctx.globalAlpha = faded ? .35 : 1;
+    ctx.fillStyle = '#ffffff'; ctx.font = '500 13px Saira, sans-serif';
+    ctx.fillText(A.label.toUpperCase().split('').join(String.fromCharCode(8202)), lx, s.y - 2);
+    ctx.fillStyle = critical ? '#ff8da0' : '#9fb8d8'; ctx.font = '400 11px "JetBrains Mono", monospace';
+    ctx.fillText(state.alert && s.k==='security' ? 'Antivirus OFF' : A.status, lx, s.y + 14);
+    ctx.globalCompositeOperation='lighter';
+  });
+  ctx.globalAlpha = 1;
+
+  // comets
+  for(let i=comets.length-1;i>=0;i--){
+    const c = comets[i];
+    if(state.running) c.p += dt*c.v;
+    if(c.p >= 1){ comets.splice(i,1); state.boost = Math.min(.5, state.boost + .006); continue; }
+    ctx.fillStyle = state.alert ? CRIT : c.col;
+    for(let k=0;k<4;k++){
+      const p = Math.max(0,c.p - k*.025), q = 1-p;
+      const x = q*q*c.x + 2*q*p*c.mx + p*p*cx, y = q*q*c.y + 2*q*p*c.my + p*p*cy;
+      ctx.globalAlpha = (1-k/4)*.9*(1-c.p*.4);
+      const sz = 2.4 - k*.4; ctx.fillRect(x-sz/2,y-sz/2,sz,sz);
+    }
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation='source-over';
+}
+function burst(area, n){
+  const s = sats.find(s=>s.k===area); if(!s) return;
+  const G = coreGeom();
+  for(let i=0;i<(n||34);i++){
+    comets.push({x:s.x+rnd(-10,10), y:s.y+rnd(-10,10), mx:(s.x+G.cx)/2+rnd(-90,90), my:(s.y+G.cy)/2+rnd(-90,90), p:rnd(-.35,0), v:rnd(.45,.9), col:AREAS[area].color});
+  }
+  state.speak = 1;
+}
+
+// satellites: hover and click
+function satAt(e){
+  const r = core.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  return sats.find(s => Math.hypot(s.x-x, s.y-y) < 26);
+}
+core.addEventListener('pointermove', e => { const s = satAt(e); state.hover = s ? s.k : null; core.style.cursor = s ? 'pointer' : 'default'; if(!state.running) frame(performance.now(), true); });
+core.addEventListener('click', e => { const s = satAt(e); setFilter(s ? (state.filter===s.k ? null : s.k) : null); });
+
+// ---------- events feed ----------
+const feed = document.getElementById('feed'), filterBtn = document.getElementById('filterBtn');
+const POOL = [
+  ['network','Phone came home'], ['network','Apple TV went to sleep'], ['network','Network sweep · 6 devices answered'],
+  ['network','Router answered DNS in 8 ms'], ['system','GPU 61°C · fans normal'], ['system','Chrome is using 2.1 GB of memory'],
+  ['system','CPU settled after the game closed'], ['security','Virus definitions checked · current'], ['security','Firewall · all profiles on'],
+  ['crashes','Event log scanned · no new crashes'], ['tuneup','Startup apps unchanged since Tuesday'], ['tuneup','Temp files grew to 3.4 GB'],
+  ['ai','Matrix wrote a note on "Restart to finish updates"'], ['ai','Weekly review ready: 2 changes since last Sunday']
+];
+function hhmmss(d){ return d.toTimeString().slice(0,8); }
+function addEvent(area, text, when, quiet){
+  const li = document.createElement('li'); li.dataset.area = area;
+  const col = area==='crit' ? CRIT : AREAS[area].color;
+  const label = area==='crit' ? 'Security' : AREAS[area].label;
+  li.innerHTML = '<time></time><span class="tag" style="color:'+col+'"></span><span class="txt"></span>';
+  li.querySelector('time').textContent = hhmmss(when || new Date());
+  li.querySelector('.tag').textContent = label;
+  li.querySelector('.txt').textContent = text;
+  if(state.filter && area!==state.filter) li.hidden = true;
+  feed.prepend(li);
+  while(feed.children.length > 40) feed.lastChild.remove();
+  if(!quiet) burst(area==='crit' ? 'security' : area);
+}
+const now = Date.now();
+[['network','New device joined · unlisted maker',180],['ai','Matrix flagged the new device as critical',175],['system','Gaming session ended · peak GPU 74°C',5400],
+ ['network','Phone came home',11700],['security','Virus definitions updated',45000],['crashes','Event log scanned · no new crashes',600]]
+ .sort((a,b)=>b[2]-a[2]).forEach(e => addEvent(e[0], e[1], new Date(now - e[2]*1000), true));
+
+function setFilter(k){
+  state.filter = AREAS[k] ? k : null;
+  [...feed.children].forEach(li => li.hidden = !!state.filter && li.dataset.area !== state.filter);
+  filterBtn.hidden = !state.filter;
+  if(state.filter) filterBtn.textContent = 'Showing ' + AREAS[state.filter].label + ' · show all';
+  document.querySelectorAll('nav.views button').forEach(b => b.setAttribute('aria-current', String(b.dataset.view === (state.filter || 'overview'))));
+  if(!state.running) frame(performance.now(), true);
+}
+filterBtn.addEventListener('click', () => setFilter(null));
+document.querySelectorAll('nav.views button').forEach(b => b.addEventListener('click', () => {
+  const v = b.dataset.view;
+  if(AREAS[v]) setFilter(v); else { setFilter(null); document.querySelectorAll('nav.views button').forEach(x => x.setAttribute('aria-current', String(x===b))); }
+}));
+
+// ---------- system meters (sample random walk) ----------
+const M = {cpu:34, gpu:52, temp:61, mem:58, disk:71, net:1.2};
+function walk(v, lo, hi, step){ return Math.min(hi, Math.max(lo, v + rnd(-step,step))); }
+function paintMeters(){
+  const set = (id, txt, pct) => { document.getElementById('m-'+id).textContent = txt; document.getElementById('b-'+id).style.width = pct+'%'; };
+  set('cpu', Math.round(M.cpu)+'%', M.cpu); set('gpu', Math.round(M.gpu)+'%', M.gpu);
+  set('temp', Math.round(M.temp)+'°C', M.temp); set('mem', Math.round(M.mem)+'%', M.mem);
+  set('disk', Math.round(M.disk)+'%', M.disk); set('net', M.net.toFixed(1)+' MB/s', Math.min(100, M.net*20));
+  AREAS.system.status = 'CPU '+Math.round(M.cpu)+'% · '+Math.round(M.temp)+'°C';
+}
+paintMeters();
+
+// ---------- dock ----------
+const wave = document.getElementById('wave'), bars = [];
+for(let i=0;i<28;i++){ const b = document.createElement('i'); wave.appendChild(b); bars.push(b); }
+const voiceLabel = document.getElementById('voiceLabel'), taskText = document.getElementById('taskText');
+let checkIn = 252;
+const TASKS = [() => 'Watching your network · 6 devices', () => 'Next security check in '+Math.floor(checkIn/60)+':'+String(checkIn%60).padStart(2,'0'), () => 'Reading the event log every 10 minutes'];
+let taskI = 0;
+
+const toastEl = document.getElementById('toast'); let toastTimer;
+function toast(msg){ toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(()=>toastEl.hidden=true, 2600); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-toast]'); if(b) toast(b.dataset.toast); });
+
+document.getElementById('askForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const inp = document.getElementById('askInput'), q = inp.value.trim(); if(!q) return;
+  inp.value = '';
+  addEvent('ai', 'You asked: "'+q.slice(0,60)+'"');
+  taskText.textContent = 'Thinking about your question…';
+  setTimeout(() => { addEvent('ai', 'Answer ready (in the real app your local AI replies here)'); taskText.textContent = TASKS[0](); }, 1600);
+});
+
+// ---------- red alert demo ----------
+const alertBtn = document.getElementById('alertBtn'), banner = document.getElementById('banner');
+const headline = document.getElementById('headline'), subline = document.getElementById('subline'), statusText = document.getElementById('statusText');
+let alertCard = null;
+function setAlert(on){
+  state.alert = on; document.body.classList.toggle('alert', on); banner.hidden = !on;
+  alertBtn.textContent = on ? 'End red alert' : 'Demo red alert';
+  headline.textContent = on ? 'SHIELDS DOWN' : 'ALL WATCHED';
+  subline.textContent = on ? 'Antivirus stopped scanning 0:02 ago · everything else is fine' : '6 devices · 0 crashes this week · concept demo, sample data';
+  statusText.textContent = on ? 'Red alert · ROG STRIX' : 'Watching · ROG STRIX';
+  if(on){
+    alertCard = document.createElement('article'); alertCard.className = 'item crit flash';
+    alertCard.innerHTML = '<span class="sev">CRITICAL · RIGHT NOW</span><h3>Real-time virus protection is off</h3><p>Windows Security stopped scanning files as they open.</p><div class="acts"><button type="button" class="primary" data-toast="Opening Windows Security (demo)">Open Windows Security</button></div>';
+    document.getElementById('advisorList').prepend(alertCard);
+    addEvent('crit', 'Real-time protection turned off');
+    burst('security', 80);
+  } else {
+    if(alertCard) alertCard.remove(); alertCard = null;
+    addEvent('security', 'Real-time protection is back on · alert resolved');
+  }
+  if(!state.running) frame(performance.now(), true);
+}
+alertBtn.addEventListener('click', () => setAlert(!state.alert));
+document.getElementById('endAlert').addEventListener('click', () => setAlert(false));
+
+// ---------- motion toggle ----------
+const motionBtn = document.getElementById('motionBtn');
+function setRunning(on){ state.running = on; motionBtn.textContent = on ? 'Pause motion' : 'Play motion'; if(on){ last = performance.now(); requestAnimationFrame(loop); } }
+motionBtn.addEventListener('click', () => setRunning(!state.running));
+
+// ---------- loop ----------
+let last = performance.now(), nextEvent = 2500, secAcc = 0, taskAcc = 0;
+function frame(now, still){
+  const dt = still ? 0 : Math.min(.05, (now-last)/1000);
+  if(!still){ last = now; state.t += dt; }
+  const t = state.t;
+  drawFlow(t); drawCore(t, dt);
+  state.speak = Math.max(.15, state.speak - dt*.6);
+  bars.forEach((b,i) => { const v = (Math.sin(t*7 + i*.55)*.5+.5)*(Math.sin(t*3.1 + i*1.3)*.5+.5); b.style.height = (3 + v*30*state.speak)+'px'; });
+  voiceLabel.textContent = state.speak > .5 ? 'SPEAKING' : 'IDLE';
+  if(still) return;
+  nextEvent -= dt*1000;
+  if(nextEvent <= 0){ const e = POOL[Math.floor(Math.random()*POOL.length)]; addEvent(e[0], e[1]); nextEvent = rnd(2600, 5200); }
+  secAcc += dt;
+  if(secAcc >= 1){ secAcc = 0; checkIn = checkIn>0 ? checkIn-1 : 300;
+    M.cpu = walk(M.cpu,12,80,6); M.gpu = walk(M.gpu,20,90,6); M.temp = walk(M.temp,48,78,1.5); M.mem = walk(M.mem,50,66,1); M.net = walk(M.net,.1,4.5,.5); paintMeters(); }
+  taskAcc += dt;
+  if(taskAcc >= 4){ taskAcc = 0; taskI = (taskI+1)%TASKS.length; if(!taskText.textContent.startsWith('Thinking')) taskText.textContent = TASKS[taskI](); }
+  else if(taskI===1) taskText.textContent = TASKS[1]();
+}
+function loop(now){ if(!state.running) return; frame(now); requestAnimationFrame(loop); }
+
+addEventListener('resize', () => { resize(); if(!state.running) frame(performance.now(), true); });
+resize();
+state.t = 3;
+frame(performance.now(), true);
+if(state.running) requestAnimationFrame(loop); else motionBtn.textContent = 'Play motion';
+if(document.fonts) document.fonts.ready.then(() => { if(!state.running) frame(performance.now(), true); });
+})();
+</script>

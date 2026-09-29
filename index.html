@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matrix</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/matrix-192.png">
+  <meta name="theme-color" content="#05080d">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wght@300;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Side menu · the selected view · Advisor / Ask Matrix (device details slide over it) -->
+  <main class="workspace">
+    <nav class="rail hud-frame" aria-label="Views">
+      <div class="brand">
+        <h1>MATRIX<span class="brand-sub">Live system intelligence</span></h1>
+        <div class="status-line" id="status-line" aria-live="polite">
+          <span class="status-dot"></span><span id="status-text">Connecting…</span>
+        </div>
+        <p class="brand-devices"><span id="stat-online">–</span> devices online</p>
+      </div>
+
+      <a class="rail-item" href="#overview" data-view="overview">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+        <span>Overview</span></a>
+      <a class="rail-item" href="#network" data-view="network">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v5M12 12.5 6.5 17M12 12.5l5.5 4.5"/></svg>
+        <span>Network</span><span class="rail-badge" id="badge-network" hidden></span></a>
+      <a class="rail-item" href="#performance" data-view="performance">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6H21"/></svg>
+        <span>Performance</span></a>
+      <a class="rail-item" href="#security" data-view="security">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.2 7.5 9.5 4.3-1.3 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>Security</span></a>
+      <a class="rail-item" href="#events" data-view="events">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5Z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>
+        <span>Crashes</span><span class="rail-badge" id="badge-events" hidden></span></a>
+      <a class="rail-item" href="#tuneup" data-view="tuneup">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M12 4v16M19 4v16"/><rect x="3" y="7" width="4" height="3" rx="1"/><rect x="10" y="13" width="4" height="3" rx="1"/><rect x="17" y="9" width="4" height="3" rx="1"/></svg>
+        <span>Tune-up</span></a>
+      <a class="rail-item" href="#modes" data-view="modes">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v3M12 17.5v3M4.6 7l2.6 1.5M16.8 15.5l2.6 1.5M4.6 17l2.6-1.5M16.8 8.5l2.6-1.5"/><circle cx="12" cy="12" r="4"/></svg>
+        <span>Modes</span></a>
+      <a class="rail-item" href="#timeline" data-view="timeline">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>
+        <span>Timeline</span></a>
+      <section class="rail-sys" aria-label="System">
+        <span class="label">System</span>
+        <div class="meter"><span>CPU</span><b id="m-cpu">–</b><div class="bar" id="bar-cpu"><i></i></div></div>
+        <div class="meter"><span id="m-gpu-label">GPU</span><b id="m-gpu">–</b><div class="bar" id="bar-gpu"><i></i></div></div>
+        <div class="meter"><span>GPU temperature</span><b id="m-temp">–</b><div class="bar" id="bar-temp"><i></i></div></div>
+        <div class="meter"><span>Memory</span><b id="m-mem">–</b><div class="bar" id="bar-mem"><i></i></div></div>
+        <div class="meter"><span>Disk</span><b id="m-disk">–</b><div class="bar" id="bar-disk"><i></i></div></div>
+        <div class="meter"><span>To review</span><b id="stat-advice">–</b></div>
+      </section>
+
+      <a class="rail-item rail-item--bottom" href="#settings" data-view="settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+        <span>Settings</span></a>
+    </nav>
+
+    <section class="main hud-frame">
+      <div class="view" id="view-overview" data-view="overview"></div>
+      <div class="view" id="view-network" data-view="network" hidden></div>
+      <div class="view" id="view-performance" data-view="performance" hidden></div>
+      <div class="view" id="view-security" data-view="security" hidden></div>
+      <div class="view" id="view-events" data-view="events" hidden></div>
+      <div class="view" id="view-tuneup" data-view="tuneup" hidden></div>
+      <div class="view" id="view-modes" data-view="modes" hidden></div>
+      <div class="view" id="view-timeline" data-view="timeline" hidden></div>
+      <div class="view" id="view-settings" data-view="settings" hidden></div>
+    </section>
+
+    <div class="side hud-frame">
+      <nav class="tabs" role="tablist">
+        <button class="tab is-active" type="button" role="tab" data-tab="advisor">
+          Advisor <span class="count" id="advisor-count">0</span></button>
+        <button class="tab" type="button" role="tab" data-tab="chat">Ask Matrix</button>
+      </nav>
+      <div class="side-body">
+        <aside class="advisor-panel" id="advisor" aria-label="Advisor"></aside>
+        <aside class="chat-panel" id="chat" aria-label="Ask Matrix" hidden></aside>
+      </div>
+      <!-- Device details slide over both tabs -->
+      <aside class="details-panel" id="details" aria-live="polite" hidden></aside>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span id="footer-status">Waiting for Matrix…</span>
+    <span class="statusbar-sep">·</span> <span id="footer-version"></span>
+    <span class="statusbar-sep">·</span>
+    <span class="clock"><span id="clock-time"></span> <span class="clock-date" id="clock-date"></span></span>
+    <span class="statusbar-tools">
+      <button class="tool-btn" type="button" data-tool="screenshot" title="Copy a screenshot of this window, ready to paste">📷 Screenshot</button>
+      <button class="tool-btn" type="button" data-tool="diagnostics" title="Copy a troubleshooting report, ready to paste">⎘ Copy diagnostics</button>
+    </span>
+  </footer>
+
+  <!-- Shown when the background server isn't running -->
+  <div class="offline" id="offline" hidden>
+    <div class="offline-card">
+      <p class="offline-kicker">Link lost</p>
+      <h2>Matrix isn't running</h2>
+      <p>Start it from the <strong>Start menu</strong> (search for "Matrix"). If you haven't installed it yet,
+        double-click <strong>Install or Update Matrix</strong> in the folder you downloaded.</p>
+      <p class="dim">This window reconnects automatically<span class="dots"></span></p>
+    </div>
+  </div>
+
+  <!-- A small notice for button results ("Opened Windows Update") -->
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

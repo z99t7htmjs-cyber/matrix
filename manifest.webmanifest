@@ -1,0 +1,13 @@
+{
+  "name": "Matrix",
+  "short_name": "Matrix",
+  "description": "Live command center for your PC, Windows and home network.",
+  "start_url": "/#overview",
+  "display": "standalone",
+  "background_color": "#05080d",
+  "theme_color": "#05080d",
+  "icons": [
+    { "src": "icons/matrix-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/matrix-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
