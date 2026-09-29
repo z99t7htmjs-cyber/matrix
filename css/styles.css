@@ -1042,7 +1042,7 @@ code {
 .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
 .row-actions .ask-link { margin-top: 0; }
 
-.health--buttons .health-row { grid-template-columns: 20px 120px minmax(0, 1fr) auto; }
+.health--buttons .health-row { grid-template-columns: 20px 120px minmax(0, 1fr) auto; max-width: 460px; }
 .health-row { grid-template-columns: 20px 110px minmax(0, 1fr) 0; }
 .health-text { min-width: 0; overflow-wrap: anywhere; }
 

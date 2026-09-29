@@ -26,6 +26,31 @@ Read this first, then ROADMAP.md and README.md.
   notice, never auto-apply.
 
 ## Where things stand
+- 0.11.16 is delivered: two small things, both from Rob directly.
+  - **Single-file installer** (`Matrix Setup.bat`) -- Rob was uneasy about
+    running an unfamiliar `.bat` file (a completely reasonable instinct;
+    walked him through exactly what's in it and why, in plain language, and
+    told him the zip flow still works fine if he'd rather stick with that).
+    Built by hand since this sandbox couldn't install 7-Zip or similar
+    (blocked by the sandbox's own package-registry allowlist): a small
+    PowerShell header script followed by the zipped app appended as base64
+    text after a `:::MATRIX_PAYLOAD:::` marker line. **Verified in this
+    sandbox:** simulated the exact extraction logic in Python (find the
+    marker, join every line after it, base64-decode) and confirmed the
+    result matches the original zip byte-for-byte, and that the decoded
+    zip's 83 files are intact. **Not verified, and can't be from here:** the
+    real double-click-and-run on an actual Windows machine -- no Windows box
+    in this sandbox. First real run on Rob's laptop is the true test; ask
+    him how it went before assuming it works.
+  - **Security page layout fix** -- Rob spotted the "Open" buttons sitting
+    far from their rows (screenshot: big gap between value text and
+    button). Root cause: `.health--buttons .health-row`'s middle column used
+    `1fr`, so on Security's wide card it ate all the leftover width and
+    pushed the button to the card's far edge. Capped the row's width
+    (`max-width: 460px` in `css/styles.css`) so it sits close to the text
+    instead. Verified with a headless-browser screenshot against mock
+    health data, before and after.
+  See ROADMAP.md's "Shipped in 0.11.16" for the same, slightly longer.
 - 0.11.15 is delivered: Matrix now has a real home on GitHub --
   **github.com/z99t7htmjs-cyber/matrix** (public repo; connect a GitHub
   account under claude.ai Settings -> Connectors, then `add_repo` with

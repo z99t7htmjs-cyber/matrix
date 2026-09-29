@@ -57,6 +57,30 @@ one-click apply, never automatic):
 - [ ] Push toward "nothing sits as static text with no action" wherever an action
       genuinely exists -- ongoing, not a one-batch project.
 
+## Shipped in 0.11.16: single-file installer, and a Security-page layout fix
+
+- [x] **Single-file installer** (`Matrix Setup.bat`). Instead of a zip you
+      unpack and then run a script inside, this is one file: double-click it
+      and it unpacks itself into a temp folder, runs the same
+      `installer\install.ps1` as always, then deletes the temp folder. Built
+      by hand (no 7-Zip or similar available in this sandbox) as a small
+      PowerShell header plus the zipped app appended as base64 text after a
+      marker line. Verified in this sandbox: the exact extraction logic
+      (find the marker, join everything after it, base64-decode) reproduces
+      the original zip byte-for-byte, and the decoded zip's contents are
+      intact (all 83 files). **Not** verified: the real double-click-and-run
+      on an actual Windows machine, since this sandbox has none -- that
+      first real run on Rob's laptop is the true test. The old zip +
+      separate install.ps1 flow still works exactly as before; this is an
+      addition, not a replacement.
+- [x] **Security page: "Open" buttons were stretched to the far edge of the
+      card.** The checklist row's middle column used `1fr`, so on a wide
+      card it grabbed all the leftover space and shoved the button away from
+      its label/value -- cosmetic only, nothing was broken. Capped that
+      row's width (`.health--buttons .health-row { max-width: 460px }`) so
+      the button sits right after the text. Verified with a headless-browser
+      screenshot against mock health data before/after the change.
+
 ## Shipped in 0.11.15: Matrix now lives on GitHub, and can tell you when it's out of date
 
 Rob asked to streamline how each new edition gets installed. That split into

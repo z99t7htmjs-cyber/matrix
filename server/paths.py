@@ -19,7 +19,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.11.15"
+VERSION = "0.11.16"
 
 APP_DIR = Path(__file__).resolve().parent.parent
 IS_WINDOWS = os.name == "nt"
