@@ -57,6 +57,61 @@ one-click apply, never automatic):
 - [ ] Push toward "nothing sits as static text with no action" wherever an action
       genuinely exists -- ongoing, not a one-batch project.
 
+## Shipped in 0.11.15: Matrix now lives on GitHub, and can tell you when it's out of date
+
+Rob asked to streamline how each new edition gets installed. That split into
+two separate things: where new versions live, and how automatic getting
+them should be. Talked through both with Rob before building -- landed on
+a public GitHub repo (github.com/z99t7htmjs-cyber/matrix) plus a
+notify-only update check, deliberately not a self-installing one, matching
+the same "recommend, don't auto-act" spirit as everything else in Matrix.
+
+- [x] **The code now lives at github.com/z99t7htmjs-cyber/matrix.** Public
+      repo -- Rob's own data, network, and anything Matrix finds on his PC
+      is never in it, same as always; only the app's own source is. Pushed
+      as one clean initial commit (this repo's own history starts here,
+      not a re-creation of every internal iteration).
+  - Two real platform limits hit and worked around honestly rather than
+    silently: creating a GitHub *Release* (the labeled-snapshot-with-
+    download-link feature) is blocked for this session type, and so is
+    pushing a plain git *tag* -- both return a clean 403 rather than
+    working. Redesigned the update-check around neither: it just asks
+    "what does `server/paths.py`'s VERSION string say on the main branch
+    right now," via GitHub's public, read-only contents API. No release,
+    no tag, no login needed -- verified this actually works fully
+    unauthenticated against the live repo before writing a line of the
+    monitor code.
+- [x] **Matrix checks for updates itself now** (`server/update_check.py`,
+      new `UpdateCheckMonitor`, checked every 6 hours). When the version on
+      GitHub is newer, it's a normal Advisor card ("Matrix 0.11.16 is
+      available"), same as any other suggestion -- not a popup, not
+      anything automatic. Matrix still never downloads or installs
+      anything on its own; the card's steps are the same "open the link,
+      extract, run the installer" flow as always. **Deliberately not
+      gated by `Monitor.warmed_up()`** the way every other background
+      check now is (see 0.11.13/0.11.14 above) -- this one depends on the
+      internet being reachable and GitHub not being blocked, which can
+      genuinely never resolve on a locked-down network, and blocking every
+      other alert's resolution on that would be a worse bug than the one
+      it would prevent. Documented the reasoning directly in
+      `Monitor.warmed_up()`'s own docstring so this doesn't get
+      "helpfully" added to the gate by a future session without re-reading
+      why it was left out.
+
+Not done, still ahead: a real one-click "apply this update" button (Matrix
+running the installer itself instead of Rob re-downloading by hand) --
+Rob was told plainly this is a bigger, separate piece of work and it hasn't
+been started.
+
+Verified: `update_check.py`'s version parsing and comparison logic
+unit-tested directly, including against the real, live API response from
+the actual repo (fetched once, saved, and replayed) -- not a synthetic
+fixture. The end-to-end monitor lifecycle (before-check state ->
+collect() -> after-check snapshot shape) was also run directly. Full
+Python compile and JS syntax sweep clean. The GitHub push itself was
+verified by reading the pushed commit back from the API afterward, not
+just trusting `git push`'s exit code.
+
 ## Shipped in 0.11.14: 0.11.13's fix was real but incomplete -- network devices had the same gap
 
 Rob installed 0.11.13 and reported items were still coming back. Took that

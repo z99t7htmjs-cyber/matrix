@@ -64,6 +64,7 @@ from proactive import Explainer
 from system import SystemMonitor
 from thermal_trend import ThermalTrendMonitor
 from tuneup import TuneupMonitor
+from update_check import UpdateCheckMonitor
 from windows_events import EventsMonitor
 from windows_health import HealthMonitor
 
@@ -90,6 +91,7 @@ class Monitor:
         self.tuneup = TuneupMonitor()
         self.drives = DriveHealthMonitor()
         self.thermal = ThermalTrendMonitor(self.system)
+        self.updates = UpdateCheckMonitor()
         self.history = History()
         self.explainer = Explainer(self.history, self.base_state, lambda: options["model"])
         self.alerts = AlertManager(self.history, notify=self._notify, explain=self.explainer.request)
@@ -106,7 +108,7 @@ class Monitor:
 
     def start(self):
         self.history.log("matrix", f"Matrix {paths.VERSION} started", "", ref=f"start:{int(time.time())}")
-        for watcher in (self.network, self.system, self.health, self.events, self.tuneup, self.drives, self.thermal, self.explainer):
+        for watcher in (self.network, self.system, self.health, self.events, self.tuneup, self.drives, self.thermal, self.updates, self.explainer):
             watcher.start()
         threading.Thread(target=self._network_loop, daemon=True, name="network").start()
         threading.Thread(target=self._evaluate_loop, daemon=True, name="advisor").start()
@@ -154,6 +156,7 @@ class Monitor:
             "events": self.events.snapshot(),
             "tuneup": self.tuneup.snapshot(),
             "drives": self.drives.snapshot(),
+            "updateCheck": self.updates.snapshot(),
             "thermalTrend": self.thermal.snapshot(),
             "meta": {
                 "version": paths.VERSION,
@@ -191,6 +194,16 @@ class Monitor:
         SAMPLE_SECONDS before its very first sample, a much shorter gap than the others
         but a real one, and rules like the driver-check reminder ("Keep as is"-able)
         depend on it having run at least once.
+
+        `self.updates` (UpdateCheckMonitor) is deliberately NOT included below, even
+        though it can also feed a persisted, kept/snoozed suggestion. Every check here is
+        a local Windows query that's virtually guaranteed to succeed shortly after
+        startup; the update check depends on the internet being reachable and GitHub not
+        being blocked (a real, ongoing possibility on a school or work network, not just
+        a brief startup gap). Gating every other alert's resolution on this one
+        succeeding would trade a small, contained risk (the update notice possibly
+        re-flagging itself once after a restart) for a much worse one (nothing in the
+        whole app can ever resolve on a network where GitHub isn't reachable).
         """
         checks_ready = all(m.checked_at is not None for m in
                             (self.health, self.events, self.tuneup, self.drives, self.thermal)
@@ -299,7 +312,8 @@ class Monitor:
 
     def run_check(self, target):
         """'Check again': re-run one background check, then re-evaluate right away."""
-        checks = {"health": self.health, "events": self.events, "tuneup": self.tuneup, "drives": self.drives}
+        checks = {"health": self.health, "events": self.events, "tuneup": self.tuneup, "drives": self.drives,
+                  "updates": self.updates}
         if target in checks:
             finished = checks[target].run_now_and_wait(timeout=120)
         elif target == "network":

@@ -37,6 +37,7 @@ TARGETS = {
     "eventviewer": ["eventvwr.msc"],
     "reliability": ["perfmon.exe", "/rel"],
     "datafolder": ["explorer.exe", str(DATA_DIR)],
+    "matrix-update": "https://github.com/z99t7htmjs-cyber/matrix",
 }
 
 

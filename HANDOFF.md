@@ -26,6 +26,36 @@ Read this first, then ROADMAP.md and README.md.
   notice, never auto-apply.
 
 ## Where things stand
+- 0.11.15 is delivered: Matrix now has a real home on GitHub --
+  **github.com/z99t7htmjs-cyber/matrix** (public repo; connect a GitHub
+  account under claude.ai Settings -> Connectors, then `add_repo` with
+  owner `z99t7htmjs-cyber`, repo `matrix`, access `push` to work with it
+  from a session). Rob asked to streamline updates; walked him through the
+  hosting-vs-automation tradeoff before building anything, landed on
+  GitHub-hosted + notify-only (not self-installing), matching Matrix's
+  whole "recommend, don't auto-act" character.
+  - Hit two real platform limits doing this and want the next session to
+    know about them rather than re-discover them: **creating a GitHub
+    Release is blocked for this session type** (clean 403), and **so is
+    pushing a plain git tag** (also 403). Don't try either again expecting
+    a different result -- the update-check was redesigned around neither,
+    reading `server/paths.py`'s VERSION string straight off the `main`
+    branch via GitHub's public contents API instead (no release, no tag,
+    no login). Verified this works fully unauthenticated against the real
+    repo before writing the monitor.
+  - New `server/update_check.py` (`UpdateCheckMonitor`, checked every 6h)
+    feeds a normal Advisor card when a newer version exists. Deliberately
+    NOT included in `Monitor.warmed_up()`'s gate (the fix from
+    0.11.13/0.11.14) -- it depends on internet/GitHub reachability, which
+    can genuinely never succeed on a locked-down network, so gating every
+    other alert's resolution on it would be strictly worse than the small
+    risk being excluded actually carries. Reasoning is in the docstring;
+    don't "fix" this by adding it to the gate without re-reading why.
+  - **Not built:** an actual one-click "apply the update" action (Matrix
+    downloading and running the installer itself). Told Rob plainly this
+    is separate, bigger work and it hasn't been started -- the repo and
+    the notify-only check are the whole of what's live.
+  See ROADMAP.md's "Shipped in 0.11.15" for what was verified and how.
 - 0.11.14 is delivered: Rob installed 0.11.13 and said the items came back
   again anyway. Didn't assume the fix was already right -- went looking for
   what it missed, and found a real second gap: 0.11.13's `warmed_up()` only

@@ -571,9 +571,26 @@ def setup_rules(state):
     return out
 
 
+def update_check_rules(state):
+    """A newer version of Matrix itself is available. Checked against a public, unauthenticated
+    GitHub read -- no login, nothing about this PC sent anywhere. Matrix never downloads or
+    installs anything here on its own; this only tells you it exists, same as every other
+    suggestion. Not gated by Monitor.warmed_up() -- see that method for why."""
+    check = state.get("updateCheck") or {}
+    if not check.get("checkedAt") or not check.get("updateAvailable"):
+        return []
+    latest = check.get("latestVersion")
+    return [suggestion("update-available", "setup", "fyi", f"Matrix {latest} is available",
+                       f"You're running {check.get('currentVersion')}.",
+                       [f"Open {check.get('releaseUrl')} to get it.",
+                        "Extract it, then run \"Install or Update Matrix\" like always."],
+                       check="updates", kind="choice", fingerprint=f"update-available-{latest}")]
+
+
 RULES = [
     setup_rules, stability_rules, network_rules, defender_rules, firewall_rules, account_rules,
-    update_rules, disk_rules, drive_rules, thermal_rules, load_rules, startup_rules, uptime_rules, tuneup_rules, driver_rules,
+    update_rules, disk_rules, drive_rules, thermal_rules, load_rules, startup_rules, uptime_rules, tuneup_rules,
+    driver_rules, update_check_rules,
 ]
 
 # One button per suggestion: open the Windows page that fixes it, or jump to a view.
@@ -588,6 +605,7 @@ ACTIONS = {
     "updates-old": {"label": "Open Windows Update", "open": "windowsupdate"},
     "update-failed": {"label": "Open Windows Update", "open": "windowsupdate"},
     "reboot-pending": {"label": "Open Windows Update", "open": "windowsupdate"},
+    "update-available": {"label": "Open Matrix on GitHub", "open": "matrix-update"},
     "startup-apps": {"label": "Open Startup apps", "open": "startupapps"},
     "cpu-high": {"label": "Open Task Manager", "open": "taskmanager"},
     "memory-high": {"label": "Open Task Manager", "open": "taskmanager"},
