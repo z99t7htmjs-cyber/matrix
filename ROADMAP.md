@@ -8,8 +8,125 @@
 
 ## Next batch (0.12)
 
-Bugs and requests found while using 0.11 go here.
-- (none yet)
+Bugs and requests found while using 0.11 go here. Planned in detail on
+Sep 30 (talked through tradeoffs live with Rob rather than guessing at
+scope); nothing below is built yet -- this is the plan, not a changelog.
+
+**Power: plugged-in vs on-battery, switched automatically**
+- [ ] New Settings toggle, off by default: "Auto-switch power mode when I
+      plug in or unplug." Only when Rob turns this on does Matrix ever
+      change something without a click in the moment -- first time
+      anything in Matrix works that way, so it's opt-in and every switch
+      still tells him plainly ("Plugged in -> Desktop mode applied").
+- [ ] **Desktop mode** (plugged in): High performance power plan, max
+      processor state, nothing throttled, nothing closed -- the actual
+      goal is "20 Chrome tabs and 5 AI apps fighting each other with zero
+      slowdown," which is a power-plan/processor-state question more than
+      an app-closing one.
+- [ ] **Locked-down mode** (on battery): a more conservative power plan
+      (Power saver vs. Balanced -- still need Rob's call on which; Power
+      saver may be too aggressive for actually getting schoolwork done).
+      Open question, still unanswered: does he want specific apps
+      auto-closed on battery too (Homework mode already closes
+      Steam/Discord as precedent), or just the power plan tightened with
+      everything left running? Ask before building.
+- [ ] Small, quiet status dot near the top of the app showing which side
+      you're on -- NOT red (red already means "something's actually
+      wrong" everywhere else in Matrix; using it for "you're on battery"
+      would cry wolf). Cool blue-ish glow for Desktop, warm amber for
+      Locked-down, plus a one-word label. Its own on/off switch in
+      Settings so it can be hidden if it ever feels like noise.
+
+**Wake-source log (the mouse-waking-the-house problem)**
+- [ ] Rob's laptop keeps waking from sleep on tiny mouse movement --
+      Govee lights, SteelSeries Arena 7 lights, and a bright screen all
+      kick on in a dark bedroom at night. Already ruled out the easy
+      fixes (Device Manager's "allow this device to wake," checked wake
+      logs by hand) -- still happens. Only real fix last night: unplug
+      the mouse.
+  - Likely real causes, not yet confirmed on his actual machine: a
+    wireless mouse dongle usually shows up as *multiple* wake-armed
+    devices (receiver, HID entry, sometimes the USB hub too) -- disabling
+    only the one obviously named "mouse" can leave another one armed.
+    `powercfg /devicequery wake_armed` shows the complete live list. Also
+    worth checking `powercfg /a` (this laptop almost certainly uses
+    Modern Standby, which handles wake differently than classic sleep),
+    and the ASUS BIOS's own USB-wake/ErP setting, which can override
+    whatever Windows is told.
+  - **This batch:** just add a plain background log (`powercfg /lastwake`
+    read shortly after each wake, kept as a simple persisted history) --
+    nothing flashy, no UI polish, just data. The BIOS step-by-step
+    walkthrough is a separate live conversation for later, once the log
+    has real data to point at instead of guessing.
+
+**Security page: real coverage, not just the Windows-protection checklist**
+- [ ] Who has admin rights on this PC (local accounts with admin access).
+- [ ] Startup persistence check -- a security-framed pass over
+      startup/registry entries (separate from Tune-up's "these slow your
+      boot" view), looking for anything that looks snuck-in rather than
+      installed on purpose.
+- [ ] What this PC is sharing on the network (actual file/folder shares,
+      not just listening ports -- "Exposed to your network" doesn't cover
+      this today).
+- [ ] Hosts file check (a classic malware tampering target -- quietly
+      redirects where a site actually goes).
+- [ ] Network profile awareness (Public vs Private/Home) -- the
+      `Get-NetConnectionProfile` call removed in 0.11.12 for being
+      unread now has a real purpose: flag being on "Public" while
+      actually on trusted home Wi-Fi, or vice versa.
+- [ ] Not added: drive-encryption status -- Rob already confirmed Device
+      Encryption is on (free, built into Home, no Pro upgrade needed), so
+      this isn't a gap.
+
+**Unsecure/public Wi-Fi detection** (school, coffee shops, anywhere not home)
+- [ ] Open/unsecured network warning -- flagged clearly, different tone
+      than a routine FYI.
+- [ ] "Unfamiliar network" heightened alertness -- when Matrix sees a
+      network that isn't the saved home one, turn up how prominently it
+      surfaces device/connection alerts.
+- [ ] Gateway/router MAC-address change mid-session -- a textbook sign of
+      spoofing if it happens without an actual network switch.
+- [ ] DNS server sanity check -- public Wi-Fi sometimes hands out sketchy
+      DNS to inject ads or worse.
+  - Told Rob plainly what this can't do: it can't see inside browser
+    traffic (nor should it), so it can't promise "this connection isn't
+    being intercepted" -- that's what a VPN is for, a separate tool, not
+    something Matrix should pretend to reinvent.
+
+**Efficiency-report leftovers, finally closed out**
+- [ ] Backup status (is File History / a backup drive / OneDrive actually
+      running, when did it last succeed).
+- [ ] BIOS version display (informational only, same spirit as driver
+      version -- "what's installed," not "is something newer available"
+      yet).
+- [ ] Disk cleanup: preview-the-list-then-confirm, not silent
+      auto-delete -- same click-to-apply pattern as every other fix in
+      Matrix.
+  - CPU temperature monitoring: explicitly NOT doing this. Reading it
+    reliably means giving Matrix (or a helper) admin rights it doesn't
+    otherwise need -- a real architecture tradeoff Rob decided isn't
+    worth crossing. Don't revisit without him raising it again.
+
+**ARGUS & MOMUS: more proactive, and actually distinct**
+- [ ] Right now the personas mostly only speak up on new Advisor items.
+      Rob wants them treated as always-on commentary using *anything*
+      Matrix already monitors as material -- not just fresh alerts, but
+      chronic-but-minor conditions (memory's been high for days, Chrome
+      tab hoarding that never gets addressed) and even neutral/good-news
+      moments, so the app isn't only ever heard from when something's
+      wrong.
+  - **Rob's direct feedback, unprompted:** "so far I am not seeing any
+    attitudes" -- the two personas don't currently read as distinct to
+    him in actual use. Before or alongside making them chattier, look at
+    why: read through the current quip bank and how often it actually
+    fires, and fix the root cause rather than just adding more volume to
+    a voice that isn't landing.
+  - Explicitly NOT adding weather or any other external data source for
+    this -- Rob confirmed the material should come from what Matrix
+    already monitors on the PC, not a new outbound connection. (Matrix
+    has exactly one external connection today, the GitHub version check,
+    added only after talking it through the same way.)
+
 - Carried over from 0.10: Do Not Disturb for Modes has no reliable public API on
   current Windows, so it was left out; Armoury Crate's Silent / Performance / Turbo
   still can't be switched from Matrix (ASUS has no public interface). Revisit if
