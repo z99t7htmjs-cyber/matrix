@@ -31,12 +31,16 @@ scope); nothing below is built yet -- this is the plan, not a changelog.
     7 speakers entirely, so anything driving them is dead weight. Primary
     suspect is **SignalRGB** (he believes it's already the thing driving
     both Govee and the Arena 7's lighting, so closing it should cover
-    both without needing separate Govee/SteelSeries entries) --
-    **still need the exact process name(s) confirmed** from his actual
-    Task Manager before this goes in `closeApps` (same as Steam.exe /
-    Discord.exe today -- needs the real .exe name, not a guess). Also
-    close whatever's running an animated wallpaper, if anything -- his
-    reasoning (animated > static for battery drain) is correct.
+    both without needing separate Govee/SteelSeries entries). **Confirmed
+    from Rob's Task Manager, three separate processes, all three go in
+    `closeApps`:** `SignalRgb.exe`, `SignalRgbLauncher.exe`,
+    `SignalRgbService.exe` -- closing only the main exe risks the
+    Launcher or Service relaunching it, so all three close together.
+    Not verified live: whether the Service still tries to resurrect
+    things anyway after this ships -- if so, quick follow-up fix, not a
+    redesign. Also close whatever's running an animated wallpaper, if
+    anything -- his reasoning (animated > static for battery drain) is
+    correct.
   - **Explicitly NOT closed on battery:** Chrome, ChatGPT, Claude, PuTTY,
     or anything to do with his Bluetooth mouse -- those are exactly what
     he's actively using at school; Locked-down tightens the power plan
