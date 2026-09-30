@@ -26,10 +26,21 @@ scope); nothing below is built yet -- this is the plan, not a changelog.
 - [ ] **Locked-down mode** (on battery): a more conservative power plan
       (Power saver vs. Balanced -- still need Rob's call on which; Power
       saver may be too aggressive for actually getting schoolwork done).
-      Open question, still unanswered: does he want specific apps
-      auto-closed on battery too (Homework mode already closes
-      Steam/Discord as precedent), or just the power plan tightened with
-      everything left running? Ask before building.
+  - **Apps to close on battery, decided:** the RGB/lighting stack only --
+    on battery he's away from the Govee lights and the SteelSeries Arena
+    7 speakers entirely, so anything driving them is dead weight. Primary
+    suspect is **SignalRGB** (he believes it's already the thing driving
+    both Govee and the Arena 7's lighting, so closing it should cover
+    both without needing separate Govee/SteelSeries entries) --
+    **still need the exact process name(s) confirmed** from his actual
+    Task Manager before this goes in `closeApps` (same as Steam.exe /
+    Discord.exe today -- needs the real .exe name, not a guess). Also
+    close whatever's running an animated wallpaper, if anything -- his
+    reasoning (animated > static for battery drain) is correct.
+  - **Explicitly NOT closed on battery:** Chrome, ChatGPT, Claude, PuTTY,
+    or anything to do with his Bluetooth mouse -- those are exactly what
+    he's actively using at school; Locked-down tightens the power plan
+    around them, it doesn't take them away.
 - [ ] Small, quiet status dot near the top of the app showing which side
       you're on -- NOT red (red already means "something's actually
       wrong" everywhere else in Matrix; using it for "you're on battery"
