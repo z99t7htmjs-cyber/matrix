@@ -68,11 +68,15 @@ What's real and worth doing, in the order it actually needs to happen
 
 Rob pasted a long design critique/wishlist (not his own writing -- another
 AI's take on a screenshot of Matrix) and asked me to scrutinize it the same
-way as the ChatGPT feature list above: drop what's already built, flag what
-overlaps with items already sequenced above, keep what's genuinely new and
-in scope. Nothing below is built -- document only, same as the list above.
+way as the ChatGPT feature list above. First pass bundled too much of it
+into one "general polish" line; Rob pushed back ("address each separately,
+don't wave them off so quickly") and this is the redo -- every point from
+the pasted critique gets its own entry and its own verdict, checked against
+the actual code rather than assumed. Nothing below is built -- document
+only. Numbers refer to the pasted critique's own paragraphs, for anyone
+going back to the original text.
 
-**The big one -- Rob's own addition, not from the pasted list:**
+**The headline item -- Rob's own addition, not from the pasted list:**
 - [ ] **The living core should visually fracture to show real damage, not
       just glow.** Today the sphere already changes color and speeds up
       when something's critical (see `livingCore.js` -- this isn't
@@ -81,92 +85,145 @@ in scope. Nothing below is built -- document only, same as the list above.
       problem, the Network-colored wedge of the sphere shows as visibly
       fractured (not animated -- a static, jagged break, a different
       color), and the more areas that are unwell, the more of the sphere
-      shows fractured. Healthy = whole and smooth, like today. The
-      worse things get, the more visibly broken the core looks, scaling
-      with how much is actually wrong -- a direct, literal read of "is my
-      PC okay" from across the room.
+      shows fractured. Healthy = whole and smooth, like today. The worse
+      things get, the more visibly broken the core looks, scaling with
+      how much is actually wrong -- a direct, literal read of "is my PC
+      okay" from across the room.
   - **Reference point, handled the way this project always handles
     this:** Rob described this by comparing it to Tony Stark finding a
     cracked, damaged JARVIS after Ultron in the Marvel movies. That's
-    fine as a description of the *effect* (fractured, discolored,
-    scales with damage) -- cracks and fracture lines aren't anyone's IP.
-    What stays off the table, same firm line as always: no JARVIS/Ultron
+    fine as a description of the *effect* (fractured, discolored, scales
+    with damage) -- cracks and fracture lines aren't anyone's IP. What
+    stays off the table, same firm line as always: no JARVIS/Ultron
     naming, no Marvel-specific color grading or iconography, nothing
     that invokes the character itself rather than just "a cracked
-    sphere." The actual build (whenever it happens) should be describable
-    completely without ever mentioning Marvel, Stark, or any licensed
-    name -- if it can't be, it's drifted past "inspired by the idea of
-    damage" into territory this project doesn't go.
+    sphere." The actual build should be describable completely without
+    ever mentioning Marvel, Stark, or any licensed name.
   - **Where this sits relative to what already exists:** per-area color
     and urgency are already computed every poll (`AREAS[k].critical` /
     `.attention` in `livingCore.js`) -- the data this needs is already
     there. The new part is purely the rendering: a fracture pattern per
-    particle cluster/wedge instead of (or alongside) the existing
-    color-shift, probably a pre-generated crack mask per area that
-    reveals itself at that area's position on the sphere when critical,
-    rather than anything procedurally animated. Worth a real design pass
-    (how cracks actually look at this particle density) before building,
-    not a quick bolt-on.
+    particle cluster/wedge, probably a pre-generated crack mask per area
+    that reveals itself at that area's position when critical, rather
+    than anything procedurally animated. Worth a real design pass first.
 
-**From the pasted critique, kept as genuinely new and in scope:**
-- [ ] Give the status rail a real "system topology" feel: every nav item
-      (not just Network and Crashes, which already have badges) shows a
-      live glow/indicator when its area has something active, so a
-      problem is visible before opening that page.
-- [ ] Add a true green "resolved/success" color, distinct from the
-      cyan/blue already used for "normal" -- `.ok-text` currently reuses
-      the same accent color for both, which the pasted critique correctly
-      flagged as a real gap in an otherwise-real severity-color system
-      (`--sev-critical`/`--sev-medium`/etc. already exist and are used
-      consistently). A resolved item or a successful repair should read
-      as its own distinct color, not "still blue."
-- [ ] Extend the core's existing `critical`/`attention`/`ok` states
-      (already driving color and animation speed today) with
-      Diagnostic/Repair states tied to the troubleshooting-plan feature,
-      so running a crash-fix plan visibly looks different from idle
-      monitoring.
-- [ ] Command palette (Ctrl+K: jump to a view, "check GPU," ask Matrix a
-      question) -- genuinely new, no architectural conflicts, real
-      convenience.
-- [ ] Ambient/idle mode for when Matrix sits open on a second monitor --
-      Rob's own real use case from earlier tonight, not hypothetical:
-      after inactivity, fade to just the core and a handful of critical
-      numbers; any input brings the full interface back.
-- [ ] General visual polish pass: more size/weight contrast between
-      important and background text, less uniformly-rectangular cards,
-      small hardware icons (GPU/CPU/RAM/etc.) so components become
-      recognizable at a glance, micro-animations on value changes instead
-      of hard refreshes. All CSS/presentation work, no new data or
-      architecture.
+**Every point from the pasted critique, addressed individually:**
 
-**Already covered by items sequenced above -- not duplicated here:**
-- "Investigation mode" / a detective-board view connecting events, and
-  "visual memory" (event markers on a component's own history), are the
-  same feature as this list's own **Cross-area pattern noticing**, and
-  depend on the same two prerequisites (**general historical telemetry
-  storage**, **broader event log ingestion**) already sequenced above.
-  The design critique doesn't change that order -- these still can't mean
-  anything real until that foundation exists.
-- "Visualize relationships, not just numbers" (the CPU-90%-because-X
-  example) is the same underlying idea as cross-area pattern noticing,
-  not a separate ask.
+1. *(point 3) Increase hierarchy, not density.* Partially true already --
+   the view title is large with a glow, and critical state already
+   flashes/dominates. The real gap: background telemetry doesn't visibly
+   *retreat* when nothing's wrong. [ ] Keep -- moderate CSS/layout work.
+2. *(point 4) Use color semantically and ruthlessly.* Mostly already
+   true -- `--sev-critical`/`--sev-medium`/`--sev-low`/`--sev-info` plus
+   `--argus`/`--momus` are real tokens, used consistently across alerts,
+   timeline, status line. Confirmed gap: no distinct green --
+   `.ok-text` reuses the same blue for both "normal" and "resolved." [ ]
+   Keep, narrow: give resolved/success its own color.
+3. *(point 5) Make the center viz a living system model.* Already
+   substantially built -- verified in `livingCore.js`: particles are
+   colored by area, satellites show live status and turn amber/red by
+   real urgency, the sphere already speeds up 2.6x when critical, new
+   events already burst particles toward the right satellite, clicking a
+   satellite already navigates there. Genuine gap: particle *density*
+   per area is a fixed weight, doesn't shift toward whichever area is
+   actually busy right now. [ ] Keep, folded into the fracture item above
+   since they're the same piece of UI.
+4. *(point 6) Different visual states (NOMINAL/ATTENTION/DIAGNOSTIC/
+   REPAIR/CRITICAL).* Partially real -- ok/attention/critical already
+   exist and drive color + speed. Diagnostic and Repair don't exist. [ ]
+   Keep: add Diagnostic/Repair tied to the troubleshooting-plan feature,
+   so running a crash-fix plan visibly looks different from idle
+   watching.
+5. *(point 7) Make Ask Matrix feel integrated into the whole interface.*
+   Not built. Genuinely good, no rule conflicts, but a real architecture
+   change -- chat is a self-contained panel today with no hooks into
+   other views. [ ] Keep, flagged as its own future scoping conversation,
+   not foldable into a general batch.
+6. *(point 8) Contextual zoom transitions.* Same bucket as #5 -- real,
+   good, bigger than it looks. [ ] Keep, with a suggested first step
+   (smooth transition between tabs) before attempting full in-place
+   panel morphing.
+7. *(point 9) Introduce depth carefully -- Rob specifically likes this
+   one ("more layered/3D look").* A sliver already exists (cards have a
+   faint 2px blur, the details panel slides in with a 6px blur) but it's
+   subtle to the point of barely registering. Rob wants it deliberate: a
+   real layer system, translucent tiers, soft shadows clearly separating
+   foreground controls from background telemetry. [ ] Keep, elevated to
+   its own real visual-design project, not a one-line polish item.
+8. *(point 10) Make cards less rectangular.* Confirmed in the CSS --
+   every card today is a plain `border-radius: 10px` rectangle, nothing
+   clipped or asymmetric. The bottom of the app does read more
+   "enterprise dashboard" than the core does. [ ] Keep.
+9. *(point 11) Let panels expand in place.* Not cosmetic -- a navigation-
+   model change, same family as #6, not pure CSS. [ ] Keep, flagged as a
+   real interaction change rather than polish.
+10. *(point 12) Add micro-animations everywhere, but barely.* Partially
+    real -- meters already interpolate smoothly (0.8s ease on width),
+    new network devices already fade in. Confirmed gaps: timeline
+    entries don't slide in, and there's no distinct "repair succeeded"
+    confirmation pulse anywhere. [ ] Keep, scoped to those two specific
+    gaps rather than "everywhere."
+11. *(point 13) Animation speed should encode meaning.* Partially real --
+    the core already runs faster when critical. Not formalized as a rule
+    applied consistently (no "irregular = abnormal" treatment anywhere).
+    [ ] Keep, folded into the visual-states work (#4) since it's the same
+    underlying system.
+12. *(point 14) Give warnings a physical origin* (a line from the GPU
+    node to the Advisor card where its explanation appears). Genuinely
+    new, no conflicts, scopes naturally to the Overview screen where both
+    already live side by side. [ ] Keep.
+13. *(point 15) Improve typography at the smallest sizes.* Confirmed --
+    `.hint` and a lot of secondary/explanatory text (including the AI's
+    own written notes) sits at 11-12px. Cheap, concrete, and matters
+    specifically because it affects the AI explanations Rob actually
+    reads. [ ] Keep.
+14. *(points 16-23) Build a command palette* (Ctrl+K: jump to a view,
+    "check GPU," ask Matrix a question). Genuinely new, no conflicts.
+    [ ] Keep.
+15. *(point 24) Add an ambient mode* for a second monitor. Genuinely new,
+    and not hypothetical -- Rob described this exact use case himself
+    earlier the same night. [ ] Keep.
+16. *(point 25) Create a proper boot sequence.* First pass skipped this
+    outright as "pure theater" -- too quick a dismissal. A tight ~1.5s
+    brand moment that auto-disables after the first few launches (as the
+    critique itself suggests) isn't nagging, it's a small bounded touch
+    at the one moment nothing real is on screen yet. [ ] Keep, low
+    priority, tightly scoped so it never becomes a skippable-but-annoying
+    intro.
+17. *(point 26) Give hardware recognizable visual identities* (small
+    geometric symbols for GPU/CPU/RAM/etc.). Genuinely new, cheap, no
+    conflicts. [ ] Keep.
+18. *(point 27) Use the left navigation as system topology.* Confirmed
+    gap -- only Network and Crashes have live badges today; Security,
+    Performance, Tune-up, Modes have none. [ ] Keep.
+19. *(point 28) Have an actual "investigation mode"* (detective-board
+    view connecting events). Not dismissed -- genuinely good, and
+    already on this roadmap as **Cross-area pattern noticing**, correctly
+    sequenced behind two prerequisites (general historical telemetry
+    storage, broader event log ingestion) because without real history
+    to point at it would just guess confidently, which this app doesn't
+    do. Kept in its existing spot, not duplicated here.
+20. *(point 29) Build visual memory* (event markers on a component's own
+    history). Same situation as #19 -- real, good, already represented
+    by **general historical telemetry storage** above, which is the
+    actual prerequisite. Kept in its existing spot.
+21. *(point 30) Don't fill every empty space.* A design principle, not a
+    feature. [ ] Keep, recorded as a standing guideline for whoever
+    builds any of the above -- the fracture effect, new cards, and
+    layering should not get compensated for by cramming the freed-up
+    space with new widgets.
+22. *(points 31-38) Overall philosophy -- visualize relationships, not
+    just numbers.* This is the reasoning behind **Cross-area pattern
+    noticing** above, not a separate ask. Recorded as the explicit *why*
+    for that item.
 
-**Bigger than a design pass -- needs its own scoping conversation later,
-not folded into this batch of ideas:**
-- Ask Matrix reaching into the rest of the interface (highlighting the
-  relevant metric, reorienting the core, when you ask a question) would
-  be a real architecture change -- chat is a self-contained panel today
-  with no hooks into other views. Worth discussing on its own once it's
-  actually up next, not assumed in here.
-- Full contextual zoom (click GPU, side panels morph into GPU-specific
-  telemetry in place rather than navigating to a new page) is bigger
-  than it sounds; if this gets picked up, start with a smooth transition
-  between tabs and see if that alone delivers most of the feeling.
+**Nothing in the pasted critique conflicted with the no-autonomy rule** --
+it's all visualization ideas; nothing proposes Matrix acting on its own.
 
-**Explicitly skipped:**
-- A fake boot/startup animation on every launch -- pure theater, no
-  function, and cuts against keeping Matrix lean. Not doing this unless
-  Rob specifically asks again.
+**Still pending:** the earlier ChatGPT **functionality** list (30 items,
+reviewed into the "Ideas for after 0.12" section above) was pasted before
+this conversation's context got summarized, so it can't be re-scrutinized
+item-by-item the same rigorous way without Rob pasting it again.
 
 ## Next batch (after 0.12)
 
