@@ -6,6 +6,64 @@
   batch, unless Rob asks for something to be fixed right away.
 - Each batch is installed by running "Install or Update Matrix" once.
 
+## Ideas for after 0.12 (not scheduled to a batch yet)
+
+Oct 1: Rob showed Matrix's Overview to ChatGPT and asked it for ideas,
+then asked me to sort the result -- drop what we've already decided
+against or already do, keep what's genuinely new. Most of that 30-item
+list either re-suggested things already built, or suggested Matrix start
+taking actions on the PC by itself (buttons that execute repairs, a
+rollback system, "Admin" permission tier) -- that directly conflicts
+with the standing rule this whole app is built around (AI recommends,
+Rob clicks, nothing changes itself) and isn't something to drift into by
+revisiting this list. Left out entirely, not just deprioritized.
+
+What's real and worth doing, in the order it actually needs to happen
+(each one is raw material for the next, not independent):
+- [ ] **Telemetry audit.** A one-time internal pass confirming every
+      stat Matrix shows is genuinely live/real, not cached or derived in
+      a way that could mislead -- done as a dev exercise, not a UI
+      feature. Specifically NOT adding "live/cached/inferred" tags to
+      the UI itself -- that's clutter working against the visual
+      identity that's already working.
+- [ ] **General historical telemetry storage.** Right now only the
+      cooling-trend feature (0.11.12) stores a value over time. Everything
+      else is only ever "right now." A general store -- what did
+      CPU/GPU/RAM/network look like 5 minutes or 5 days ago -- is the
+      foundation several other ideas below actually need to mean anything.
+- [ ] **Confidence levels + "Why?" on AI notes.** The AI already writes
+      short explanations when something new gets flagged (0.11.13) --
+      extend that so each one is expandable into the actual evidence
+      behind it, and framed as Likely/Possible/Not enough evidence rather
+      than stated as flat fact. Cheap to add since the notes already
+      exist; high value for trust.
+- [ ] **Broader Windows Event Log ingestion.** 0.12's wake-source log is
+      the first narrow slice of this (just `powercfg /lastwake`). Once
+      that pattern's proven out, extend it to more event types -- crashes,
+      driver resets, device connects/disconnects -- feeding the same kind
+      of plain background log.
+- [ ] **Diagnostic snapshot + exportable support report.** One button
+      that gathers current telemetry, relevant event-log entries, and
+      Matrix's own recent observations into a single file -- for when
+      Rob needs to hand something to ASUS/NVIDIA/SignalRGB support
+      instead of manually screenshotting everything from memory. Pure
+      observation, no new action capability, low risk.
+- [ ] **Cross-area pattern noticing -- after, and only after, the four
+      items above exist.** Rob's pushback (Oct 1): "nothing exists in a
+      vacuum, everything's connected" -- correct instinct, and it's the
+      same idea as the "display died, driver error 6 seconds earlier"
+      example from the ChatGPT list. The reason it's sequenced last
+      rather than skipped: without real historical data and a real event
+      log across multiple areas, a feature like this has nothing genuine
+      to correlate and would just guess confidently -- exactly what this
+      app has never done. Once the foundation above exists: triggered by
+      something notable happening (a crash, an unexpected wake, a device
+      dropping out), look back across CPU/GPU/network/drivers/events in
+      the window around it and surface what else was happening then --
+      always framed as Likely/Possible, never stated as fact. Still
+      observe-and-explain only; it suggests, Rob decides, same as
+      everything else in Matrix.
+
 ## Next batch (0.12)
 
 Bugs and requests found while using 0.11 go here. Planned in detail on
