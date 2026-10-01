@@ -273,10 +273,14 @@ going back to the original text.
    real layer system, translucent tiers, soft shadows clearly separating
    foreground controls from background telemetry. [ ] Keep, elevated to
    its own real visual-design project, not a one-line polish item.
-8. *(point 10) Make cards less rectangular.* Confirmed in the CSS --
-   every card today is a plain `border-radius: 10px` rectangle, nothing
-   clipped or asymmetric. The bottom of the app does read more
-   "enterprise dashboard" than the core does. [ ] Keep.
+8. *(point 10) Make cards less rectangular.* **Decided against, Oct 1 --
+   tried it, not just discussed.** Mocked up three real side-by-side
+   versions of an actual Security card in Matrix's real colors/fonts (a
+   closed rounded rectangle like today, a clipped-corner version with
+   lit edges that fade before closing, and a full-fade version with no
+   edge at all) and had Rob look at all three. He chose to stay with
+   today's plain rounded rectangle. [x] Closed, keep cards as they are --
+   don't revisit without Rob raising it again.
 9. *(point 11) Let panels expand in place.* Not cosmetic -- a navigation-
    model change, same family as #6, not pure CSS. [ ] Keep, flagged as a
    real interaction change rather than polish.
