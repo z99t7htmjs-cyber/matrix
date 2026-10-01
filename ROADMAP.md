@@ -6,63 +6,186 @@
   batch, unless Rob asks for something to be fixed right away.
 - Each batch is installed by running "Install or Update Matrix" once.
 
-## Ideas for after 0.12 (not scheduled to a batch yet)
+## Functionality ideas for after 0.12 (Oct 1, redone without bundling)
 
-Oct 1: Rob showed Matrix's Overview to ChatGPT and asked it for ideas,
-then asked me to sort the result -- drop what we've already decided
-against or already do, keep what's genuinely new. Most of that 30-item
-list either re-suggested things already built, or suggested Matrix start
-taking actions on the PC by itself (buttons that execute repairs, a
-rollback system, "Admin" permission tier) -- that directly conflicts
-with the standing rule this whole app is built around (AI recommends,
-Rob clicks, nothing changes itself) and isn't something to drift into by
-revisiting this list. Left out entirely, not just deprioritized.
+Oct 1: Rob showed Matrix's Overview to ChatGPT and asked it for a 30-item
+roadmap. First pass through this list bundled it down to five sequenced
+items and, in doing so, stated something that turned out to be wrong --
+see item 3 below. Rob asked (same as the design list) for every point
+addressed individually against the real code, not summarized. This is
+that redo; it replaces the earlier five-item version. Numbers refer to
+the pasted list's own numbering.
 
-What's real and worth doing, in the order it actually needs to happen
-(each one is raw material for the next, not independent):
-- [ ] **Telemetry audit.** A one-time internal pass confirming every
-      stat Matrix shows is genuinely live/real, not cached or derived in
-      a way that could mislead -- done as a dev exercise, not a UI
-      feature. Specifically NOT adding "live/cached/inferred" tags to
-      the UI itself -- that's clutter working against the visual
-      identity that's already working.
-- [ ] **General historical telemetry storage.** Right now only the
-      cooling-trend feature (0.11.12) stores a value over time. Everything
-      else is only ever "right now." A general store -- what did
-      CPU/GPU/RAM/network look like 5 minutes or 5 days ago -- is the
-      foundation several other ideas below actually need to mean anything.
-- [ ] **Confidence levels + "Why?" on AI notes.** The AI already writes
-      short explanations when something new gets flagged (0.11.13) --
-      extend that so each one is expandable into the actual evidence
-      behind it, and framed as Likely/Possible/Not enough evidence rather
-      than stated as flat fact. Cheap to add since the notes already
-      exist; high value for trust.
-- [ ] **Broader Windows Event Log ingestion.** 0.12's wake-source log is
-      the first narrow slice of this (just `powercfg /lastwake`). Once
-      that pattern's proven out, extend it to more event types -- crashes,
-      driver resets, device connects/disconnects -- feeding the same kind
-      of plain background log.
-- [ ] **Diagnostic snapshot + exportable support report.** One button
-      that gathers current telemetry, relevant event-log entries, and
-      Matrix's own recent observations into a single file -- for when
-      Rob needs to hand something to ASUS/NVIDIA/SignalRGB support
-      instead of manually screenshotting everything from memory. Pure
-      observation, no new action capability, low risk.
-- [ ] **Cross-area pattern noticing -- after, and only after, the four
-      items above exist.** Rob's pushback (Oct 1): "nothing exists in a
-      vacuum, everything's connected" -- correct instinct, and it's the
-      same idea as the "display died, driver error 6 seconds earlier"
-      example from the ChatGPT list. The reason it's sequenced last
-      rather than skipped: without real historical data and a real event
-      log across multiple areas, a feature like this has nothing genuine
-      to correlate and would just guess confidently -- exactly what this
-      app has never done. Once the foundation above exists: triggered by
-      something notable happening (a crash, an unexpected wake, a device
-      dropping out), look back across CPU/GPU/network/drivers/events in
-      the window around it and surface what else was happening then --
-      always framed as Likely/Possible, never stated as fact. Still
-      observe-and-explain only; it suggests, Rob decides, same as
-      everything else in Matrix.
+**Correction to the record:** the previous version of this section said
+"right now only the cooling-trend feature stores a value over time,
+everything else is only ever right now." That was wrong. `history.py`
+already runs a real SQLite database -- CPU/memory/GPU/GPU-temp/network
+samples every minute for 90 days (already powering Performance's 24h/7d/
+30d charts), a `timeline` table logging real events for a year, and a
+`snapshots` table for day-over-day comparison. Several items below are
+closer to done than this document previously implied.
+
+1. *Telemetry truth layer.* **Keep.** A one-time internal audit
+   confirming every stat is genuinely live/real, not cached or derived
+   misleadingly -- a dev exercise, not a UI feature. Specifically NOT
+   adding "live/cached/inferred" tags to the UI -- that's clutter against
+   the visual identity that already works.
+2. *Hardware inventory with a detail page per device.* CPU/GPU/battery/
+   BIOS/disks are already read, but there's no per-component drill-down
+   the way Network already has one. **Keep** -- real gap, confirmed in
+   `performance.js` (flat gauge cards, no detail panel).
+3. *Historical telemetry.* **Already real**, see correction above. Not a
+   build item -- the record needed fixing, not the feature.
+4. *Real event timeline.* Partially real -- the `timeline` table already
+   logs alerts, crashes, mode switches, device joins, repairs, AI notes.
+   Confirmed gap: it doesn't ingest broader Windows Event Log categories
+   (driver resets, update installs, service failures, GPU resets), and
+   0.12's wake log writes to its *own* separate file instead of into this
+   same table -- worth reconciling when this is picked up. **Keep**, same
+   item as the existing "Broader Windows Event Log ingestion" below, with
+   that implementation note folded in.
+5. *Make the center viz meaningful.* Already substantially true (see the
+   design-list redo above). Not duplicated here.
+6. *Device relationship map* (Windows → GPU → DisplayPort → Monitor,
+   showing where in a chain something failed). Confirmed nothing like
+   this exists today. **Keep** -- genuinely new, real scope.
+7. *Real anomaly detection with baselines.* Partially real -- confirmed
+   `thermal_trend.py` already does exactly this pattern (daily idle-GPU
+   baseline, watches for creep) for one metric. **Keep**, framed as
+   "extend the existing proven pattern to CPU idle/RAM creep/etc.," not
+   a new concept.
+8. *Correlation engine.* Same item as the existing "Cross-area pattern
+   noticing" below. Worth re-examining its sequencing now that item 3
+   turns out to already be mostly done -- it may be closer than this
+   document previously implied, once the event-log gap (item 4) closes.
+9. *Ask Matrix with machine context.* **Already real** -- confirmed in
+   `ai.py`: every chat question already gets a full live-state summary
+   before the AI answers. Not a gap.
+10. *Evidence behind AI answers ("Why?").* Same item as the existing
+    "Confidence levels" below. Not duplicated.
+11. *Confidence levels (Known/Likely/Possible/Unknown).* Same item as 10.
+12. *Safe actions as buttons.* Partially real -- disk cleanup and Mode
+    switching are already exactly this shape (confirm, then act, logged).
+    The specific actions listed (restart a service, kill a frozen
+    process, reset a network adapter) aren't built. **Keep**, framed as
+    extending the existing pattern, not a new concept.
+13. *Repair plans (Problem → Evidence → Action → Risk → Undo → Execute).*
+    **Already real** -- confirmed `plans.py`'s crash-troubleshooting plan
+    is exactly this shape today, for one problem type. **Keep**, framed
+    as "generalize the existing pattern to other problems."
+14. *Rollback system ("undo last Matrix change").* Partially real --
+    Modes already has `revert()`. A general undo across every action
+    type is new. **Keep.**
+15. *Permission levels (Observe/Advise/Assist/Admin).* **Disregarded --
+    conflict.** The "Admin" tier that executes repairs on its own is the
+    same escalation already rejected once; it crosses the no-autonomy
+    rule this whole app is built on, not a style choice to revisit.
+16. *Network command center.* Partially real -- gateway, DNS, local
+    devices, open/unsecured detection exist (0.12). Confirmed missing:
+    signal strength, latency, packet loss, bandwidth history, adapter
+    name/connection type -- none of these exist in the code. **Keep**,
+    scoped to the confirmed gaps.
+17. *Peripheral intelligence* (displays, USB hubs, mouse/keyboard, audio,
+    Bluetooth, lighting -- monitoring, not just closing SignalRGB on
+    battery like 0.12 does). **Keep** -- genuinely new, real scope.
+18. *Performance sessions* (recognize gaming/coding/idle, compare
+    behavior between sessions). Needs item 3's historical storage, which
+    now already exists. **Keep.**
+19. *"Since your last visit" expanded.* Already exists as a real card
+    (`overview.js`), currently a simple recent-items list. **Keep** --
+    reasonably scoped expansion into a fuller generated summary.
+20. *Health score, properly separated (not one mystery number).*
+    Confirmed -- Matrix has no single overall score anywhere today. This
+    item is "don't do the bad version," which Matrix already doesn't do.
+    Nothing to add; already matches the existing philosophy.
+21. *Notifications with restraint.* **Already real** -- confirmed
+    CPU-high requires a sustained 30-second average (not a 4-second
+    blip), GPU-overheat requires 2 minutes sustained, routine items are
+    fyi-level and archive quietly. Not a gap.
+22. *Searchable history* ("when was the last NVIDIA crash?"). Depends on
+    items 3/4 (3 now already in place). **Keep**, sequenced after item 4.
+23. *Diagnostic snapshots.* Same item as the existing "Diagnostic
+    snapshot + exportable support report" below. One naming note: the
+    word "snapshot" is already used internally for the day-over-day
+    comparison feature -- pick a different name when this is built so
+    the two don't collide.
+24. *Exportable support report.* Same item as 23.
+25. *Plugin/integration architecture* (NVIDIA, SignalRGB, SteelSeries,
+    etc. as modules instead of hardwired). **Keep** -- genuinely new,
+    more relevant once item 17 exists to justify it; sequence alongside
+    or after 17.
+26. *Voice comes later.* Partially real -- Matrix already reads things
+    aloud to you (Web Speech API, shipped 0.11.0). Not built: the other
+    direction, talking *to* Matrix. **Keep**, scoped specifically to
+    voice input, since output already exists.
+27. *Local-first architecture.* **Already true** -- confirmed, the one
+    outbound connection is the GitHub version check; Ollama runs on
+    localhost. Not a gap.
+28. *AI optional, not foundational.* **Already true by design** --
+    confirmed in `proactive.py`: the Advisor's rules are plain
+    deterministic Python with zero AI dependency; AI only adds
+    explanations on top when Ollama happens to be running. Not a gap.
+29. *Matrix memory* (recurring problems, fixes that worked, driver
+    history, usual devices). Partially real -- the `timeline`/`ai_notes`
+    tables already hold much of this implicitly. Formalizing it into
+    actual structured memory is genuinely new and depends on the
+    correlation engine (item 8) to be useful rather than just a log.
+    **Keep**, sequenced near item 8.
+30. *Keep the visual identity, refine don't redesign.* Already the
+    explicit philosophy of every design conversation this project has
+    had. Recorded as the standing principle, not a checkbox.
+
+**What's real and worth doing, in the order it actually needs to happen**
+(unchanged in substance from before, items renumbered/annotated above):
+- [ ] **Telemetry audit** (item 1).
+- [ ] **Hardware inventory with per-device detail pages** (item 2).
+- [ ] **Confidence levels + "Why?" on AI notes** (items 10/11). The AI
+      already writes short explanations when something new gets flagged
+      (0.11.13) -- extend that so each one is expandable into the actual
+      evidence behind it, framed as Likely/Possible/Not enough evidence
+      rather than stated as flat fact.
+- [ ] **Broader Windows Event Log ingestion** (item 4), including
+      reconciling 0.12's wake log into the same `timeline` table instead
+      of its own separate file.
+- [ ] **Diagnostic snapshot + exportable support report** (items 23/24),
+      named to avoid colliding with the existing "snapshots" (day-over-
+      day comparison) feature.
+- [ ] **Device relationship map** (item 6).
+- [ ] **Extend the existing baseline/anomaly pattern** beyond GPU idle
+      temp -- CPU idle, RAM creep, etc. (item 7).
+- [ ] **Generalize repair plans** beyond crashes to other problem types
+      (item 13), and a **general rollback/undo** across every action type
+      (item 14), and **more safe actions** beyond disk cleanup/Modes
+      (item 12).
+- [ ] **Network command center gaps**: signal strength, latency, packet
+      loss, bandwidth history, adapter/connection type (item 16).
+- [ ] **Peripheral intelligence**: real monitoring of displays, USB hubs,
+      mouse/keyboard, audio, Bluetooth, lighting -- not just closing
+      SignalRGB on battery (item 17).
+- [ ] **Performance sessions**: recognize gaming/coding/idle and compare
+      behavior between them, now that historical storage exists (item 18).
+- [ ] **Expand "Since your last visit"** into a fuller generated summary
+      (item 19).
+- [ ] **Searchable history** (item 22), after the event-log work above.
+- [ ] **Voice input** -- talking to Matrix, not just Matrix reading aloud
+      (item 26).
+- [ ] **Plugin/integration architecture** for NVIDIA/SignalRGB/SteelSeries/
+      etc., once peripheral intelligence (item 17) gives it something
+      real to modularize (item 25).
+- [ ] **Cross-area pattern noticing** (item 8/correlation engine) and
+      **structured Matrix memory** (item 29) -- still sequenced together,
+      last, since both need real historical data and a real event log to
+      have anything genuine to work with rather than guessing confidently.
+      Rob's original pushback (Oct 1) still applies: "nothing exists in a
+      vacuum, everything's connected" -- correct instinct, not rejected,
+      just dependent on the foundation above actually existing first. May
+      be closer than previously thought now that item 3 turns out to
+      already be mostly done.
+
+**Disregarded -- conflicts with the no-autonomy rule:** permission levels
+with an "Admin" tier that executes repairs on its own (item 15). Not a
+style preference to revisit later; it's the one line this app doesn't
+cross.
 
 ## Design ideas for after 0.12 (Oct 1 design pass)
 
