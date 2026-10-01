@@ -38,6 +38,9 @@ TARGETS = {
     "reliability": ["perfmon.exe", "/rel"],
     "datafolder": ["explorer.exe", str(DATA_DIR)],
     "matrix-update": "https://github.com/z99t7htmjs-cyber/matrix",
+    "accounts": "ms-settings:otherusers",
+    "backup": "ms-settings:backup",
+    "sharing": ["control.exe", "/name", "Microsoft.NetworkAndSharingCenter"],
 }
 
 

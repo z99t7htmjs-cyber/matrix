@@ -460,6 +460,29 @@ code {
 .brand-devices { margin: 2px 0 0; font: 12px var(--font-mono); color: var(--text-dim); }
 .brand-devices span { color: var(--text); font-weight: 600; }
 
+/* Desktop / Locked-down power-mode indicator, quiet by design -- never red (red means something's wrong). */
+.power-mode-row {
+  --tone: var(--text-dim);
+  margin: 2px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 11px var(--font-mono);
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+.power-mode-row[data-mode="desktop"] { --tone: #5fd4ff; }
+.power-mode-row[data-mode="locked-down"] { --tone: #e8b35a; }
+.power-mode-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 8px var(--tone);
+  flex: none;
+}
+.power-mode-row span:last-child { color: var(--tone); }
+
 /* Overall status: green / amber / red depending on the worst advice */
 .status-line {
   --tone: var(--text-dim);

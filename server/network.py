@@ -161,6 +161,7 @@ class NetworkBuilder:
         self.names = identify.NameResolver()
         self.first_seen = {}  # alert id -> timestamp, so alerts keep their original time
         self.last_bytes = None  # (time, received, sent) for this PC's traffic rate
+        self._last_gateway = None  # (ip, mac) from the previous build(), for mid-session spoofing
 
     def start(self):
         self.vendors.start()
@@ -200,6 +201,47 @@ class NetworkBuilder:
             shown = ", ".join(str(p) for p in exposed[:12]) + (" …" if len(exposed) > 12 else "")
             alerts.append(self.alert("this-pc", "listening-ports", "info",
                                      f"{len(exposed)} ports open to the network", f"Listening on: {shown}"))
+        return alerts
+
+    # Well-known public resolvers, for the DNS sanity check below -- not exhaustive, just
+    # the handful a reasonable person might actually have configured on purpose.
+    KNOWN_PUBLIC_DNS = {
+        "8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9", "149.112.112.112",
+        "208.67.222.222", "208.67.220.220",
+    }
+
+    def unsecure_network_alerts(self, gateway, router_mac, subnet, away, home_known):
+        """0.12: real, checkable things worth a note on an unfamiliar network. Attached
+        to this-pc since that's where the existing "Exposed to your network" card
+        already reads its alerts from -- no new UI needed."""
+        alerts = []
+        auth = c.wifi_security()
+        if auth and auth.lower() == "open":
+            alerts.append(self.alert("this-pc", "open-wifi", "medium", "This Wi-Fi network has no password",
+                                     "Anyone nearby can see traffic on this network. Avoid signing into anything "
+                                     "sensitive here, or use a VPN -- Matrix can't see inside your browser traffic "
+                                     "to protect that part for you."))
+        if gateway and router_mac:
+            previous = self._last_gateway
+            if previous and previous[0] == gateway and previous[1] != router_mac:
+                alerts.append(self.alert("this-pc", "gateway-changed", "high",
+                                         "This network's router changed mid-session",
+                                         f"Same address ({gateway}) answered from a different device just now. "
+                                         "That can be an ordinary router reboot, or a sign someone's spoofing "
+                                         "this network -- worth a second look if anything else seems off."))
+            self._last_gateway = (gateway, router_mac)
+        dns = c.dns_servers()
+        odd_dns = [ip for ip in dns if ip not in self.KNOWN_PUBLIC_DNS and
+                  not (subnet and ipaddress.ip_address(ip) in subnet)]
+        if away and odd_dns:
+            alerts.append(self.alert("this-pc", "unusual-dns", "low", "This network's DNS looks unfamiliar",
+                                     f"Handed out {', '.join(odd_dns)} -- not your router and not a well-known "
+                                     "public resolver. Often harmless, but public Wi-Fi occasionally redirects DNS "
+                                     "to inject ads or worse."))
+        if away and home_known:
+            alerts.append(self.alert("this-pc", "unfamiliar-network", "info", "You're on a different network than usual",
+                                     "Matrix is going easier on device scanning here, same as always on a network "
+                                     "that isn't home -- worth knowing while you're out."))
         return alerts
 
     def describe_device(self, ip, mac, known):
@@ -293,13 +335,16 @@ class NetworkBuilder:
             })
         connections.sort(key=lambda x: (not c.is_public(x["remote"]), x["process"] or "", x["remote"]))
         my_info = known.get(my_mac) or {}
+        pc_alerts = (self.listening_alerts(listening) +
+                     self.unsecure_network_alerts(gateway, router_mac, subnet, away, bool(home_mac)))
         nodes.append({
             "id": "this-pc", "name": my_info.get("name", f"This PC ({socket.gethostname()})"),
             "type": my_info.get("type", "computer"), "ip": my_ip, "mac": my_mac,
             "vendor": self.vendors.lookup(my_mac), "hostname": socket.gethostname(), "known": True,
             "saved": my_mac in known,
             "status": "online", "traffic": self.measure_traffic(),
-            "connections": connections[:MAX_CONNECTIONS_SHOWN], "alerts": self.listening_alerts(listening),
+            "connections": connections[:MAX_CONNECTIONS_SHOWN], "alerts": pc_alerts,
+            "wifiAuth": c.wifi_security(), "dns": c.dns_servers(),
         })
         links.append({"source": "router", "target": "this-pc"})
 

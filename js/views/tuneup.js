@@ -24,6 +24,8 @@ export function renderTuneup(root, state) {
       ${t.power ? card('Battery vs. plugged in', powerRows(t.power, t.batteryHealth)) : ''}
       ${state.drives ? card('Drive health', driveRows(state.drives)) : ''}
       ${state.thermalTrend?.supported ? card('Cooling trend', thermalRows(state.thermalTrend)) : ''}
+      ${state.health?.bios ? card('System', systemFacts(state.health.bios)) : ''}
+      ${card('Free up space', cleanupBody(state.cleanup), { wide: true })}
       ${card('What changed', changesBody(state.changes), { wide: true })}
       ${card('Preinstalled extras', flagged(t.flagged), { extra: '<button class="btn btn--ghost btn--small card-btn" type="button" data-open="apps">Installed apps</button>' })}
       ${card('Starts with Windows', startup(t.startup), { wide: true, extra: '<button class="btn btn--ghost btn--small card-btn" type="button" data-open="startupapps">Startup settings</button>' })}
@@ -103,6 +105,34 @@ function powerRows(power, health) {
     <div class="facts" style="margin-top:12px">
       <div><span>Battery health</span><strong class="${tone}">${health.healthPercent}% of new</strong></div>
       ${health.cycleCount ? `<div><span>Charge cycles</span><strong>${health.cycleCount}</strong></div>` : ''}
+    </div>`;
+}
+
+function systemFacts(bios) {
+  return `
+    <div class="facts">
+      <div><span>BIOS version</span><strong>${escapeHtml(bios.version || 'Unknown')}</strong></div>
+      ${bios.releaseDate ? `<div><span>BIOS date</span><strong>${escapeHtml(bios.releaseDate)}</strong></div>` : ''}
+    </div>
+    <p class="hint">What's installed, not whether something newer exists -- same spirit as the driver reminder above.</p>`;
+}
+
+function cleanupBody(cleanup) {
+  if (!cleanup) {
+    return `<p class="empty">See how much space Windows' own temporary files are using.</p>
+      <button class="btn btn--ghost btn--small" type="button" data-scan-cleanup>Scan</button>`;
+  }
+  if (!cleanup.supported) return '<p class="empty">Disk cleanup runs on Windows only.</p>';
+  const item = cleanup.items[0];
+  const mb = Math.round((item.sizeBytes / 1_000_000) * 10) / 10;
+  return `
+    <ul class="plain-list">
+      <li><strong>${escapeHtml(item.label)}</strong><span>${mb} MB across ${item.fileCount} files</span></li>
+    </ul>
+    <p class="hint">${escapeHtml(item.detail)}</p>
+    <div class="row-actions">
+      <button class="btn btn--ghost btn--small" type="button" data-scan-cleanup>Rescan</button>
+      ${item.fileCount ? '<button class="btn btn--small" type="button" data-clean-cleanup>Clean temporary files</button>' : ''}
     </div>`;
 }
 

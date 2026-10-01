@@ -51,11 +51,14 @@ import collectors as c
 import desktop
 import diagnostics
 import digest
+import disk_cleanup
 import identify
 import modes
 import network
 import paths
 import plans
+import power_switch
+import wake_log
 from alerts import AlertManager
 from drive_health import DriveHealthMonitor
 from history import History, presence_summary
@@ -92,6 +95,8 @@ class Monitor:
         self.drives = DriveHealthMonitor()
         self.thermal = ThermalTrendMonitor(self.system)
         self.updates = UpdateCheckMonitor()
+        self.wake_log = wake_log.WakeLogMonitor()
+        self.power_switch = power_switch.PowerSwitch()
         self.history = History()
         self.explainer = Explainer(self.history, self.base_state, lambda: options["model"])
         self.alerts = AlertManager(self.history, notify=self._notify, explain=self.explainer.request)
@@ -108,7 +113,7 @@ class Monitor:
 
     def start(self):
         self.history.log("matrix", f"Matrix {paths.VERSION} started", "", ref=f"start:{int(time.time())}")
-        for watcher in (self.network, self.system, self.health, self.events, self.tuneup, self.drives, self.thermal, self.updates, self.explainer):
+        for watcher in (self.network, self.system, self.health, self.events, self.tuneup, self.drives, self.thermal, self.updates, self.wake_log, self.explainer):
             watcher.start()
         threading.Thread(target=self._network_loop, daemon=True, name="network").start()
         threading.Thread(target=self._evaluate_loop, daemon=True, name="advisor").start()
@@ -158,6 +163,7 @@ class Monitor:
             "drives": self.drives.snapshot(),
             "updateCheck": self.updates.snapshot(),
             "thermalTrend": self.thermal.snapshot(),
+            "wakeLog": self.wake_log.snapshot(),
             "meta": {
                 "version": paths.VERSION,
                 "vendorDb": self.network.vendors.status,
@@ -169,6 +175,8 @@ class Monitor:
                 "autoVoiceEnabled": paths.load_settings().get("autoVoiceEnabled", False),
                 "awayFromHome": self.network_state.get("awayFromHome", False),
                 "homeKnown": self.network_state.get("homeKnown", False),
+                "autoSwitchPower": paths.load_settings().get("autoSwitchPower", False),
+                "showPowerModeDot": paths.load_settings().get("showPowerModeDot", True),
             },
             "advice": self.evaluated["advice"],
             "handled": self.evaluated["handled"],
@@ -256,8 +264,13 @@ class Monitor:
                 print(f"[matrix] Weekly digest failed: {err}")
             time.sleep(DIGEST_CHECK_EVERY_SECONDS)
 
+    def _notify_and_log(self, title, message):
+        self._notify(title, message)
+        self.history.log("mode", title, message, ref=f"auto-power:{int(time.time())}")
+
     def evaluate(self):
         with self.eval_lock:
+            self.power_switch.tick(self.system.latest, self._notify_and_log)
             state = self.base_state()
             events = state["events"]
             self._log_new_crashes(events)
@@ -391,6 +404,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json({"text": text})
             if path == "/api/modes":
                 return self.send_json(modes.state())
+            if path == "/api/cleanup":
+                return self.send_json(disk_cleanup.scan())
             if path == "/api/digest":
                 latest = monitor.history.latest_digest()
                 return self.send_json({"digest": latest, "due": digest.due(monitor.history)})
@@ -415,6 +430,7 @@ class Handler(SimpleHTTPRequestHandler):
             "/api/screenshot": self.handle_screenshot,
             "/api/settings": self.handle_settings,
             "/api/modes": self.handle_modes,
+            "/api/cleanup": self.handle_cleanup,
             "/api/digest": self.handle_digest,
             "/api/quit": self.handle_quit,
         }
@@ -484,7 +500,8 @@ class Handler(SimpleHTTPRequestHandler):
             paths.save_settings(openWindowAtLogin=open_window)
             enabled = bool(body["autostart"]) if "autostart" in body else desktop.autostart_enabled()
             desktop.set_autostart(enabled, open_window)
-        for flag in ("personaEnabled", "autoVoiceEnabled", "livingLook", "awayFromHome"):
+        for flag in ("personaEnabled", "autoVoiceEnabled", "livingLook", "awayFromHome",
+                     "autoSwitchPower", "showPowerModeDot"):
             if flag in body:
                 paths.save_settings(**{flag: bool(body[flag])})
         if "awayFromHome" in body:
@@ -509,6 +526,17 @@ class Handler(SimpleHTTPRequestHandler):
             monitor.run_check("tuneup")
             return self.send_json({"ok": True, **result})
         raise ValueError("Unknown action.")
+
+    def handle_cleanup(self, body):
+        result = disk_cleanup.clean(body.get("items"))
+        if result["deletedFiles"]:
+            mb = round(result["deletedBytes"] / 1_000_000, 1)
+            monitor.history.log("cleanup", f"Freed up {mb} MB",
+                                f"{result['deletedFiles']} temporary files removed"
+                                + (f", {result['skippedFiles']} skipped (in use)" if result["skippedFiles"] else ""),
+                                ref=f"cleanup:{int(time.time())}")
+        monitor.run_check("tuneup")
+        return self.send_json({"ok": True, **result})
 
     def handle_digest(self, body):
         if body.get("action") != "generate":
@@ -602,6 +630,8 @@ def settings_payload():
         "livingLook": saved["livingLook"],
         "awayFromHome": saved["awayFromHome"],
         "homeKnown": bool(saved["homeGatewayMac"]),
+        "autoSwitchPower": saved["autoSwitchPower"],
+        "showPowerModeDot": saved["showPowerModeDot"],
     }
 
 
@@ -694,6 +724,7 @@ def main():
     imported = paths.migrate_known_devices()
     if imported:
         print(f"[matrix] Imported your device names from {imported}")
+    paths.ensure_power_modes()
     monitor.start()
     start_tray(url)
 

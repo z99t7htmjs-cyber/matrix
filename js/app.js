@@ -36,6 +36,7 @@ const VIEWS = ['overview', 'network', 'performance', 'security', 'events', 'tune
 let state = null;
 let selectedId = null;
 let currentView = null;
+let cleanupScan = null; // result of the last "Scan" in Tune-up's "Free up space" card; not part of polled state
 const busy = new Set(); // Advisor items being re-checked right now
 const autoSpoken = new Set(); // critical item ids already read aloud automatically this session
 
@@ -134,10 +135,22 @@ document.addEventListener('click', async (e) => {
   const tool = el('[data-tool]');
   const speakBtn = el('[data-speak]');
   const motionToggle = el('[data-motion-toggle]');
+  const scanCleanup = el('[data-scan-cleanup]');
+  const cleanCleanup = el('[data-clean-cleanup]');
 
   if (motionToggle) {
     e.stopPropagation();
     toggleMotionPause();
+  } else if (scanCleanup) {
+    await run(async () => { cleanupScan = await getJson('/api/cleanup'); }, null, false);
+    renderView();
+  } else if (cleanCleanup) {
+    const before = cleanupScan;
+    await run(() => post('/api/cleanup', { items: ['temp'] }), null, false);
+    cleanupScan = await getJson('/api/cleanup').catch(() => null);
+    const mb = before?.items?.[0] ? Math.round(before.items[0].sizeBytes / 1_000_000 * 10) / 10 : null;
+    toast(mb ? `Freed up about ${mb} MB` : 'Done');
+    renderView();
   } else if (speakBtn) {
     speak(speakBtn.dataset.speak, speakBtn.dataset.voice);
   } else if (open) {
@@ -256,6 +269,7 @@ function renderView() {
   if (currentView === 'network') networkView.render(state, selectedId);
   const render = renderers[currentView];
   if (!render) return;
+  state.cleanup = cleanupScan; // merged in here, not polled -- see cleanupScan's declaration
   const view = $(`view-${currentView}`);
   const scroll = view.scrollTop;
   render(view, state);
@@ -323,6 +337,8 @@ function renderHeader() {
   const crashes = state.plans?.crashes?.state === 'active' ? state.plans.crashes.counted.length : 0;
   setBadge('badge-events', crashes);
 
+  renderPowerModeDot(state);
+
   const vendor = { loading: 'loading maker list', ready: 'maker lookup on', unavailable: 'maker lookup unavailable' };
   $('footer-status').textContent = `● Live · ${state.system.hostname || 'this PC'} · ${vendor[state.meta.vendorDb] || ''}`;
   $('footer-version').textContent = `Matrix ${state.meta.version}`;
@@ -331,6 +347,20 @@ function renderHeader() {
 function setBadge(id, count) {
   $(id).hidden = !count;
   $(id).textContent = count;
+}
+
+/** Quiet Desktop/Locked-down indicator near the top of the rail. Off entirely if there's no
+ * battery to switch on (desktops), or if the "Show the Desktop/Locked-down indicator" setting is off. */
+function renderPowerModeDot(state) {
+  const row = $('power-mode-row');
+  const plugged = state.system.battery?.plugged;
+  if (!row || !state.meta.showPowerModeDot || plugged == null) {
+    if (row) row.hidden = true;
+    return;
+  }
+  row.hidden = false;
+  row.dataset.mode = plugged ? 'desktop' : 'locked-down';
+  $('power-mode-text').textContent = plugged ? 'Desktop mode' : 'Locked-down mode';
 }
 
 /** The rail's thin glowing meter bars: CPU / GPU / GPU temp / Memory / Disk. */

@@ -16,6 +16,8 @@ export class SettingsView {
       if (e.target.name === 'autoVoiceEnabled') this.save({ autoVoiceEnabled: e.target.checked });
       if (e.target.name === 'livingLook') this.save({ livingLook: e.target.checked });
       if (e.target.name === 'awayFromHome') this.save({ awayFromHome: e.target.checked });
+      if (e.target.name === 'autoSwitchPower') this.save({ autoSwitchPower: e.target.checked });
+      if (e.target.name === 'showPowerModeDot') this.save({ showPowerModeDot: e.target.checked });
     });
     root.addEventListener('click', (e) => {
       if (e.target.closest('[data-action="quit"]')) this.quit();
@@ -91,6 +93,24 @@ export class SettingsView {
           <header class="card-head"><h3>Ask Matrix</h3></header>
           <p>Local AI model: <span class="mono">${escapeHtml(s.model)}</span>, running through Ollama on this PC.</p>
           <p class="hint">Nothing you ask leaves your computer.</p>
+        </article>
+
+        <article class="card">
+          <header class="card-head"><h3>Power</h3></header>
+          <label class="switch-row">
+            <input type="checkbox" name="autoSwitchPower" ${s.autoSwitchPower ? 'checked' : ''}>
+            <span><strong>Auto-switch power mode when I plug in or unplug</strong>
+              <span class="dim">Off by default -- the one setting that lets Matrix change something with no click
+              in the moment. On: plugging in applies Desktop mode (High performance, nothing throttled); unplugging
+              applies Locked-down mode (a more conservative plan, closes the RGB/lighting stack). Every switch still
+              shows a notification, same as if you'd clicked it yourself. Edit either mode, including which apps
+              close, from the Modes view.</span></span>
+          </label>
+          <label class="switch-row">
+            <input type="checkbox" name="showPowerModeDot" ${s.showPowerModeDot ? 'checked' : ''}>
+            <span><strong>Show the Desktop/Locked-down indicator</strong>
+              <span class="dim">A small dot near the top of the app showing which power mode applies right now.</span></span>
+          </label>
         </article>
 
         <article class="card">

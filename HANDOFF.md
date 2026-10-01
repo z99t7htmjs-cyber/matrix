@@ -24,8 +24,70 @@ Read this first, then ROADMAP.md and README.md.
   own. Every fix goes through the same preview → confirm pattern Modes established in
   0.10. "Give the AI more hands in things" means better recommendations and louder
   notice, never auto-apply.
+  - **One explicit, opt-in exception, added in 0.12:** power-mode auto-switching.
+    Off by default; only once Rob turns on "Auto-switch power mode when I plug in or
+    unplug" in Settings does Matrix apply a Mode with no click in the moment --
+    Desktop mode on plugging in, Locked-down on unplugging. Every switch still shows
+    a notification, same as if he'd clicked it himself, and there's a dedicated
+    on/off switch for the small status dot that shows which side it's on. This is a
+    deliberate, Rob-confirmed carve-out, not a quiet erosion of the rule -- don't
+    generalize it to anything else without the same kind of explicit ask.
 
 ## Where things stand
+- 0.12.0 is delivered: the full batch planned live with Rob on Sep 30 --
+  Power auto-switching, the wake-source log, five Security additions, four
+  unsecure-Wi-Fi detections, and the three remaining efficiency-report
+  items. See ROADMAP.md's "Shipped in 0.12" for the full, itemized list;
+  highlights and honest caveats below.
+  - **Power: Desktop mode (plugged in) / Locked-down mode (on battery),
+    with opt-in auto-switching.** Reused the existing Modes
+    `apply()`/`preview()`/`revert()` machinery rather than building a
+    parallel system, so editing either mode (including which apps close)
+    already works from the Modes view with no new code. Locked-down
+    closes the RGB/lighting stack (`SignalRgb.exe` + its Launcher and
+    Service -- all three, confirmed from Rob's Task Manager, so the
+    Service can't relaunch the main exe alone). A small Desktop/
+    Locked-down status dot now sits under the device count in the side
+    rail -- blue for Desktop, amber for Locked-down, never red (red is
+    reserved for "something's actually wrong"), with its own Settings
+    toggle. This is the one explicit exception to the no-autonomy rule
+    (see above) -- off by default, notifies on every switch.
+  - **Wake-source log**, aimed at the mouse-waking-the-house problem: a
+    plain persisted history of `powercfg /lastwake` reads, detected by
+    comparing the actual gap between background poll ticks to the
+    expected interval (there's no simple unelevated wake-event API).
+    Nothing flashy on purpose -- Rob wants data first, then a separate
+    live conversation about the BIOS-level fix once there's something
+    real to point at.
+  - **Security +5, Wi-Fi +4:** all nine new checks surface through
+    Security's *existing* UI (the global Advisor panel and the "Exposed
+    to your network" card) -- no new page UI needed for any of them, a
+    real scope-reduction found by reading how those panels already
+    render. One worth knowing about: the startup-persistence check is a
+    pattern match (temp folder, or loose directly under Roaming with no
+    vendor subfolder), explicitly framed as "worth a look," never a
+    verdict -- legitimate apps use AppData too.
+  - **Efficiency leftovers:** backup status, BIOS version, and disk
+    cleanup (scoped to just `%TEMP%` -- Recycle Bin and Windows Update
+    Cleanup need elevation, left for later). CPU temperature stays
+    explicitly not done, per Rob's own call on the elevation boundary.
+  - **Honest testing caveat, same shape as every release before this
+    one:** this sandbox has no real Windows machine. Every changed file
+    compiles/parses clean, and the new parsing logic
+    (`wifi_security()`, `dns_servers()`, the startup-path check) was
+    verified against realistic sample data with known expected output --
+    but the actual PowerShell calls, the mode-switch apps really closing,
+    the wake log surviving a real sleep/resume cycle, and how the new
+    status dot and Tune-up cards look on a real screen are all unverified
+    until Rob runs this for real. Ask him, don't assume.
+  - **Deliberately left out of 0.12, and why:** ARGUS/MOMUS proactive
+    chatter (always-on commentary using everything Matrix monitors, plus
+    a fix for the personas not reading as distinct) was planned the same
+    night as the rest of this batch, but Rob explicitly chose to document
+    it in ROADMAP.md's "Next batch" and build it later rather than
+    tonight -- it's a bigger, more open-ended feature, and nothing in its
+    code was touched. Don't mistake the roadmap write-up for already-built
+    work.
 - 0.11.16 is delivered: two small things, both from Rob directly.
   - **Single-file installer** (`Matrix Setup.bat`) -- Rob was uneasy about
     running an unfamiliar `.bat` file (a completely reasonable instinct;

@@ -19,7 +19,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.11.16"
+VERSION = "0.12.0"
 
 APP_DIR = Path(__file__).resolve().parent.parent
 IS_WINDOWS = os.name == "nt"
@@ -53,6 +53,18 @@ DEFAULT_MODES = [
     {"id": "battery", "name": "Battery", "powerPlan": "Power saver", "gameMode": False, "closeApps": [], "openApps": []},
 ]
 
+# Added in 0.12 for auto-switch-by-power-source (see ensure_power_modes()). Kept as plain
+# Modes -- same preview/apply machinery, same editable-in-Settings behavior -- rather than a
+# parallel system. Locked-down closes the RGB/lighting stack (SignalRGB enumerates as three
+# separate processes; closing only the main exe risks the Launcher or Service relaunching it)
+# since on battery Rob is away from the Govee lights and the Arena 7 speakers entirely.
+POWER_SWITCH_MODES = [
+    {"id": "desktop", "name": "Desktop", "powerPlan": "High performance", "gameMode": None,
+     "closeApps": [], "openApps": []},
+    {"id": "locked-down", "name": "Locked-down", "powerPlan": "Power saver", "gameMode": None,
+     "closeApps": ["SignalRgb.exe", "SignalRgbLauncher.exe", "SignalRgbService.exe"], "openApps": []},
+]
+
 DEFAULT_SETTINGS = {
     "openWindowAtLogin": False,  # at login, start in the background (False) or also open the window (True)
     "baselineAt": None,  # when "Trust all current devices" was last used
@@ -63,6 +75,8 @@ DEFAULT_SETTINGS = {
     "livingLook": True,  # Living (animated) Overview vs. Classic (still, card grid only)
     "homeGatewayMac": None,  # this router's MAC, captured by "Trust all current devices" -- how Matrix recognizes home
     "awayFromHome": False,  # manual override: pause device scanning right now, whatever network this is
+    "autoSwitchPower": False,  # off by default -- the one setting that lets Matrix change something with no click
+    "showPowerModeDot": True,  # small Desktop/Locked-down indicator near the top of the app
 }
 
 
@@ -103,6 +117,23 @@ def save_settings(**changes):
     settings = {**load_settings(), **changes}
     write_json_atomic(SETTINGS_FILE, settings)
     return settings
+
+
+def ensure_power_modes():
+    """0.12: add the Desktop / Locked-down modes if they're missing.
+
+    DEFAULT_SETTINGS only seeds a brand-new settings.json -- anyone who already has one
+    (everyone upgrading) keeps their saved "modes" list as-is, so the two new modes would
+    silently never appear without this. Call once at startup, after the version that
+    introduced them. Existing modes (and any renaming Rob's done) are left untouched;
+    this only appends what's missing, matching by id.
+    """
+    settings = load_settings()
+    modes = list(settings.get("modes") or [])
+    existing_ids = {m.get("id") for m in modes}
+    missing = [m for m in POWER_SWITCH_MODES if m["id"] not in existing_ids]
+    if missing:
+        save_settings(modes=modes + missing)
 
 
 # --- moving device names from older versions -----------------------------------------

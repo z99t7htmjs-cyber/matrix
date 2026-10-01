@@ -236,3 +236,42 @@ def byte_counters():
     if not IS_WINDOWS:
         return None
     return parse_netstat_e(run(["netstat", "-e"]))
+
+
+# --- Wi-Fi security and DNS (0.12: unsecure-network detection) -----------------
+
+def wifi_security():
+    """Authentication type of the currently-connected Wi-Fi, from `netsh wlan show
+    interfaces` -- "Open" means no password, no encryption. None if not on Wi-Fi
+    (ethernet) or the command fails."""
+    if not IS_WINDOWS:
+        return None
+    match = re.search(r"^\s*Authentication\s*:\s*(.+)$", run(["netsh", "wlan", "show", "interfaces"]),
+                      re.MULTILINE)
+    return match.group(1).strip() if match else None
+
+
+def dns_servers():
+    """Configured DNS server IPs for the active interface, via `ipconfig /all` --
+    no PowerShell/COM round trip needed for something this simple. `ipconfig` wraps
+    a second/third DNS server onto its own indented line with no label, so once the
+    "DNS Servers" line is found, keep consuming bare-IP continuation lines until one
+    that isn't just an IP ends the block."""
+    if not IS_WINDOWS:
+        return []
+    lines = run(["ipconfig", "/all"], timeout=10).splitlines()
+    servers, in_block = [], False
+    for line in lines:
+        if "DNS Servers" in line and ":" in line:
+            in_block = True
+            value = line.split(":", 1)[1].strip()
+            if is_ipv4(value):
+                servers.append(value)
+            continue
+        if in_block:
+            value = line.strip()
+            if is_ipv4(value):
+                servers.append(value)
+            else:
+                in_block = False
+    return servers

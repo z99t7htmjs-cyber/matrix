@@ -64,11 +64,57 @@ try {
 $r.rebootPending = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') -or
                    (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending')
 
-# Get-NetConnectionProfile (was $r.networkProfiles) was its own separate query, run every
-# 5 minutes, whose result was never read by any advisor rule or any view -- removed entirely
-# rather than just trimmed, since it's real work, not just an unused field.
+# Get-NetConnectionProfile was removed in 0.11.12 for being collected and never read.
+# Brought back in 0.12 with a real purpose: flagging being on "Public" while actually on
+# trusted home Wi-Fi, or vice versa (see advisor.py's network_profile_rules).
+$r.networkProfiles = @(Get-NetConnectionProfile | ForEach-Object {
+  [ordered]@{ name = "$($_.Name)"; category = "$($_.NetworkCategory)" }
+})
 
 $r.startupApps = @(Get-CimInstance Win32_StartupCommand | ForEach-Object { "$($_.Name)" } | Sort-Object -Unique)
+
+# Security: who has admin rights on this PC. Group membership of the built-in Administrators
+# group is readable without elevation.
+try {
+  $r.adminAccounts = @(Get-LocalGroupMember -Group "Administrators" -ErrorAction Stop |
+    ForEach-Object { "$($_.Name)" -replace '^.*\\', '' })
+} catch { $r.adminAccounts = $null }  # null, not [], so the UI can tell "couldn't check" from "nobody"
+
+# Security: actual file/folder shares this PC is offering, not just listening ports --
+# "Exposed to your network" today only covers the latter. The default administrative
+# shares (C$, ADMIN$, IPC$) are excluded; those exist on every Windows PC and aren't
+# something Rob turned on.
+try {
+  $r.shares = @(Get-SmbShare -ErrorAction Stop | Where-Object { -not $_.Special } |
+    ForEach-Object { [ordered]@{ name = "$($_.Name)"; path = "$($_.Path)" } })
+} catch { $r.shares = $null }
+
+# Security: hosts file -- a classic malware target for quietly redirecting where a site
+# actually goes. Flag anything beyond the stock commented-out template Windows ships with,
+# rather than trying to decide which entries are "safe."
+try {
+  $hostsPath = "$env:WINDIR\System32\drivers\etc\hosts"
+  $active = @(Get-Content $hostsPath -ErrorAction Stop | Where-Object {
+    $_.Trim() -and -not $_.Trim().StartsWith('#')
+  })
+  $r.hostsFile = [ordered]@{ activeLines = $active.Count; sample = @($active | Select-Object -First 5) }
+} catch { $r.hostsFile = $null }
+
+# Efficiency-report leftover: BIOS version, informational only (same spirit as driver
+# version -- "what's installed," not "is something newer available").
+try {
+  $bios = Get-CimInstance Win32_BIOS -ErrorAction Stop
+  $r.bios = [ordered]@{ version = "$($bios.SMBIOSBIOSVersion)"; releaseDate = $(if ($bios.ReleaseDate) { $bios.ReleaseDate.ToString('yyyy-MM-dd') } else { $null }) }
+} catch { $r.bios = $null }
+
+# Efficiency-report leftover: backup status. File History's own configured state lives in
+# the registry; there's no single documented cmdlet for "last successful run," so this
+# reports what's honestly checkable -- whether File History is turned on at all -- rather
+# than guessing at a last-success time it can't reliably get without elevation.
+try {
+  $fh = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\FileHistory' -ErrorAction Stop
+  $r.backup = [ordered]@{ fileHistoryConfigured = $true }
+} catch { $r.backup = [ordered]@{ fileHistoryConfigured = $false } }
 
 $ts = Get-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server'
 if ($ts) { $r.rdpEnabled = ($ts.fDenyTSConnections -eq 0) }
@@ -103,11 +149,17 @@ def parse_health(text):
     except json.JSONDecodeError:
         return None
     # PowerShell turns single-item arrays into plain values; normalize them back to lists.
-    for key in ("firewall", "startupApps", "threats"):
+    # adminAccounts and shares are deliberately excluded here: None there means "the query
+    # failed," distinct from an empty list, and must stay None rather than become [].
+    for key in ("firewall", "startupApps", "threats", "networkProfiles"):
         value = data.get(key)
         if value is None:
             data[key] = []
         elif not isinstance(value, list):
+            data[key] = [value]
+    for key in ("adminAccounts", "shares"):
+        value = data.get(key)
+        if value is not None and not isinstance(value, list):
             data[key] = [value]
     return data
 

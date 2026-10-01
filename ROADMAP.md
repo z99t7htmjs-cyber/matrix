@@ -64,123 +64,16 @@ What's real and worth doing, in the order it actually needs to happen
       observe-and-explain only; it suggests, Rob decides, same as
       everything else in Matrix.
 
-## Next batch (0.12)
-
-Bugs and requests found while using 0.11 go here. Planned in detail on
-Sep 30 (talked through tradeoffs live with Rob rather than guessing at
-scope); nothing below is built yet -- this is the plan, not a changelog.
-
-**Power: plugged-in vs on-battery, switched automatically**
-- [ ] New Settings toggle, off by default: "Auto-switch power mode when I
-      plug in or unplug." Only when Rob turns this on does Matrix ever
-      change something without a click in the moment -- first time
-      anything in Matrix works that way, so it's opt-in and every switch
-      still tells him plainly ("Plugged in -> Desktop mode applied").
-- [ ] **Desktop mode** (plugged in): High performance power plan, max
-      processor state, nothing throttled, nothing closed -- the actual
-      goal is "20 Chrome tabs and 5 AI apps fighting each other with zero
-      slowdown," which is a power-plan/processor-state question more than
-      an app-closing one.
-- [ ] **Locked-down mode** (on battery): a more conservative power plan
-      (Power saver vs. Balanced -- still need Rob's call on which; Power
-      saver may be too aggressive for actually getting schoolwork done).
-  - **Apps to close on battery, decided:** the RGB/lighting stack only --
-    on battery he's away from the Govee lights and the SteelSeries Arena
-    7 speakers entirely, so anything driving them is dead weight. Primary
-    suspect is **SignalRGB** (he believes it's already the thing driving
-    both Govee and the Arena 7's lighting, so closing it should cover
-    both without needing separate Govee/SteelSeries entries). **Confirmed
-    from Rob's Task Manager, three separate processes, all three go in
-    `closeApps`:** `SignalRgb.exe`, `SignalRgbLauncher.exe`,
-    `SignalRgbService.exe` -- closing only the main exe risks the
-    Launcher or Service relaunching it, so all three close together.
-    Not verified live: whether the Service still tries to resurrect
-    things anyway after this ships -- if so, quick follow-up fix, not a
-    redesign. Also close whatever's running an animated wallpaper, if
-    anything -- his reasoning (animated > static for battery drain) is
-    correct.
-  - **Explicitly NOT closed on battery:** Chrome, ChatGPT, Claude, PuTTY,
-    or anything to do with his Bluetooth mouse -- those are exactly what
-    he's actively using at school; Locked-down tightens the power plan
-    around them, it doesn't take them away.
-- [ ] Small, quiet status dot near the top of the app showing which side
-      you're on -- NOT red (red already means "something's actually
-      wrong" everywhere else in Matrix; using it for "you're on battery"
-      would cry wolf). Cool blue-ish glow for Desktop, warm amber for
-      Locked-down, plus a one-word label. Its own on/off switch in
-      Settings so it can be hidden if it ever feels like noise.
-
-**Wake-source log (the mouse-waking-the-house problem)**
-- [ ] Rob's laptop keeps waking from sleep on tiny mouse movement --
-      Govee lights, SteelSeries Arena 7 lights, and a bright screen all
-      kick on in a dark bedroom at night. Already ruled out the easy
-      fixes (Device Manager's "allow this device to wake," checked wake
-      logs by hand) -- still happens. Only real fix last night: unplug
-      the mouse.
-  - Likely real causes, not yet confirmed on his actual machine: a
-    wireless mouse dongle usually shows up as *multiple* wake-armed
-    devices (receiver, HID entry, sometimes the USB hub too) -- disabling
-    only the one obviously named "mouse" can leave another one armed.
-    `powercfg /devicequery wake_armed` shows the complete live list. Also
-    worth checking `powercfg /a` (this laptop almost certainly uses
-    Modern Standby, which handles wake differently than classic sleep),
-    and the ASUS BIOS's own USB-wake/ErP setting, which can override
-    whatever Windows is told.
-  - **This batch:** just add a plain background log (`powercfg /lastwake`
-    read shortly after each wake, kept as a simple persisted history) --
-    nothing flashy, no UI polish, just data. The BIOS step-by-step
-    walkthrough is a separate live conversation for later, once the log
-    has real data to point at instead of guessing.
-
-**Security page: real coverage, not just the Windows-protection checklist**
-- [ ] Who has admin rights on this PC (local accounts with admin access).
-- [ ] Startup persistence check -- a security-framed pass over
-      startup/registry entries (separate from Tune-up's "these slow your
-      boot" view), looking for anything that looks snuck-in rather than
-      installed on purpose.
-- [ ] What this PC is sharing on the network (actual file/folder shares,
-      not just listening ports -- "Exposed to your network" doesn't cover
-      this today).
-- [ ] Hosts file check (a classic malware tampering target -- quietly
-      redirects where a site actually goes).
-- [ ] Network profile awareness (Public vs Private/Home) -- the
-      `Get-NetConnectionProfile` call removed in 0.11.12 for being
-      unread now has a real purpose: flag being on "Public" while
-      actually on trusted home Wi-Fi, or vice versa.
-- [ ] Not added: drive-encryption status -- Rob already confirmed Device
-      Encryption is on (free, built into Home, no Pro upgrade needed), so
-      this isn't a gap.
-
-**Unsecure/public Wi-Fi detection** (school, coffee shops, anywhere not home)
-- [ ] Open/unsecured network warning -- flagged clearly, different tone
-      than a routine FYI.
-- [ ] "Unfamiliar network" heightened alertness -- when Matrix sees a
-      network that isn't the saved home one, turn up how prominently it
-      surfaces device/connection alerts.
-- [ ] Gateway/router MAC-address change mid-session -- a textbook sign of
-      spoofing if it happens without an actual network switch.
-- [ ] DNS server sanity check -- public Wi-Fi sometimes hands out sketchy
-      DNS to inject ads or worse.
-  - Told Rob plainly what this can't do: it can't see inside browser
-    traffic (nor should it), so it can't promise "this connection isn't
-    being intercepted" -- that's what a VPN is for, a separate tool, not
-    something Matrix should pretend to reinvent.
-
-**Efficiency-report leftovers, finally closed out**
-- [ ] Backup status (is File History / a backup drive / OneDrive actually
-      running, when did it last succeed).
-- [ ] BIOS version display (informational only, same spirit as driver
-      version -- "what's installed," not "is something newer available"
-      yet).
-- [ ] Disk cleanup: preview-the-list-then-confirm, not silent
-      auto-delete -- same click-to-apply pattern as every other fix in
-      Matrix.
-  - CPU temperature monitoring: explicitly NOT doing this. Reading it
-    reliably means giving Matrix (or a helper) admin rights it doesn't
-    otherwise need -- a real architecture tradeoff Rob decided isn't
-    worth crossing. Don't revisit without him raising it again.
+## Next batch (after 0.12)
 
 **ARGUS & MOMUS: more proactive, and actually distinct**
+
+Planned alongside the rest of 0.12 on Sep 30, but Rob explicitly chose to
+document this one and build it in a later release rather than tonight --
+it's a bigger, more open-ended feature than the rest of the batch, and he
+wanted to think about it more before it's actually running. Not touched
+in 0.12's code at all.
+
 - [ ] Right now the personas mostly only speak up on new Advisor items.
       Rob wants them treated as always-on commentary using *anything*
       Matrix already monitors as material -- not just fresh alerts, but
@@ -194,11 +87,158 @@ scope); nothing below is built yet -- this is the plan, not a changelog.
     why: read through the current quip bank and how often it actually
     fires, and fix the root cause rather than just adding more volume to
     a voice that isn't landing.
+    - Looked at this much while documenting (not yet acted on): the
+      deterministic card quips already have real, distinct per-persona
+      banks with color-coded tags in the UI, but MOMUS only has a 15%
+      chance of speaking on "new" items -- by far the most common bucket
+      -- so ARGUS's milder "new" lines are what Rob sees almost all the
+      time. The richer AI-written "Matrix says" paragraph is a likely
+      second cause: its persona style instruction is appended after the
+      *entire* live-data dump in the system prompt, which a small local
+      model (qwen3:8b) may just not weight as strongly as the data and
+      rules above it. Worth trying first, next time this is picked up:
+      raise MOMUS's "new" odds a bit and move/strengthen the style
+      instruction's position in the prompt, then check Rob's real Ollama
+      output before assuming it's fixed.
   - Explicitly NOT adding weather or any other external data source for
     this -- Rob confirmed the material should come from what Matrix
     already monitors on the PC, not a new outbound connection. (Matrix
     has exactly one external connection today, the GitHub version check,
     added only after talking it through the same way.)
+
+## Shipped in 0.12
+
+Planned in detail on Sep 30 (talked through tradeoffs live with Rob
+rather than guessing at scope), then built and released Oct 1.
+
+**Power: plugged-in vs on-battery, switched automatically**
+- [x] New Settings toggle, off by default: "Auto-switch power mode when I
+      plug in or unplug." Only when Rob turns this on does Matrix ever
+      change something without a click in the moment -- first time
+      anything in Matrix works that way, so it's opt-in and every switch
+      still tells him plainly ("Plugged in -> Desktop mode applied").
+- [x] **Desktop mode** (plugged in): High performance power plan, max
+      processor state, nothing throttled, nothing closed -- the actual
+      goal is "20 Chrome tabs and 5 AI apps fighting each other with zero
+      slowdown," which is a power-plan/processor-state question more than
+      an app-closing one.
+- [x] **Locked-down mode** (on battery): a more conservative power plan,
+      and closes the RGB/lighting stack -- on battery he's away from the
+      Govee lights and the SteelSeries Arena 7 speakers entirely, so
+      anything driving them is dead weight. **Confirmed from Rob's Task
+      Manager, three separate processes, all three close:**
+      `SignalRgb.exe`, `SignalRgbLauncher.exe`, `SignalRgbService.exe` --
+      closing only the main exe risks the Launcher or Service relaunching
+      it, so all three close together. Not verified live (no real Windows
+      machine in this sandbox): whether the Service still tries to
+      resurrect things anyway after this ships -- if so, quick follow-up
+      fix, not a redesign.
+  - **Explicitly NOT closed on battery:** Chrome, ChatGPT, Claude, PuTTY,
+    or anything to do with his Bluetooth mouse -- those are exactly what
+    he's actively using at school; Locked-down tightens the power plan
+    around them, it doesn't take them away.
+  - Reused the existing Modes `preview()`/`apply()`/`revert()` machinery
+    wholesale (two new mode entries, "desktop" and "locked-down") rather
+    than building a parallel system -- means editing either mode, or
+    which apps close, already works today from the Modes view with no
+    new UI needed for that part.
+- [x] Small, quiet status dot near the top of the app (in the side rail,
+      under the device count) showing which side you're on -- NOT red
+      (red already means "something's actually wrong" everywhere else in
+      Matrix; using it for "you're on battery" would cry wolf). Cool
+      blue-ish glow for Desktop mode, warm amber for Locked-down, plus a
+      one-word label. Its own on/off switch in Settings
+      ("showPowerModeDot") so it can be hidden if it ever feels like
+      noise; hidden automatically on a desktop with no battery to switch
+      on in the first place.
+  - Not verified live: the actual colors/placement on a real screen --
+    checked with a headless browser against fake data (see Testing note
+    below), but Rob should glance at it once for real.
+
+**Wake-source log (the mouse-waking-the-house problem)**
+- [x] Plain background log (`powercfg /lastwake` read shortly after each
+      wake, kept as a simple persisted history, capped at 300 entries) --
+      nothing flashy, no UI polish, just data, exactly as scoped. Detects
+      a wake by comparing the actual gap between background poll ticks
+      against the expected interval, since there's no simple unelevated
+      Windows API to subscribe to wake events directly. The BIOS
+      step-by-step walkthrough to actually try to fix this for good is
+      still a separate live conversation for later, once the log has
+      real data on Rob's machine to point at instead of guessing.
+
+**Security page: real coverage, not just the Windows-protection checklist**
+- [x] Who has admin rights on this PC (local accounts with admin
+      access) -- only speaks up above two accounts.
+- [x] Startup persistence check -- a security-framed pass over startup
+      entries (separate from Tune-up's "these slow your boot" count),
+      flagging any that run from a temp folder or sit loose directly in
+      the Roaming profile with no vendor subfolder -- the shape real
+      persistence malware tends to use. Framed honestly as "worth a
+      look," never as a verdict; plenty of legitimate helper apps install
+      into AppData too.
+- [x] What this PC is sharing on the network (actual file/folder shares,
+      not just listening ports).
+- [x] Hosts file check -- flags that something's active beyond the stock
+      commented-out template, never claims to know if a given entry is
+      bad.
+- [x] Network profile awareness (Public vs Private/Home) -- flags being
+      on "Public" while actually on trusted home Wi-Fi, or "Private"
+      somewhere that isn't home.
+- [x] Not added: drive-encryption status -- Rob already confirmed Device
+      Encryption is on (free, built into Home, no Pro upgrade needed), so
+      this isn't a gap.
+  - All five surface through the existing global Advisor panel -- no new
+    dedicated Security-page UI was needed; it already renders every
+    Advisor suggestion regardless of area.
+
+**Unsecure/public Wi-Fi detection** (school, coffee shops, anywhere not home)
+- [x] Open/unsecured network warning -- flagged clearly, different tone
+      than a routine FYI.
+- [x] "Unfamiliar network" heightened alertness, built directly on the
+      `away`/`homeGatewayMac`/`homeKnown` infrastructure already added for
+      "Trust all current devices" -- it already provided most of what
+      this needed.
+- [x] Gateway/router MAC-address change mid-session -- a textbook sign of
+      spoofing if it happens without an actual network switch.
+- [x] DNS server sanity check against a list of known public DNS
+      providers plus the home subnet. Public Wi-Fi sometimes hands out
+      sketchy DNS to inject ads or worse.
+  - Told Rob plainly what this can't do: it can't see inside browser
+    traffic (nor should it), so it can't promise "this connection isn't
+    being intercepted" -- that's what a VPN is for, a separate tool, not
+    something Matrix should pretend to reinvent.
+  - All four surface via the existing "Exposed to your network" Security
+    page card -- again, no new page UI needed.
+
+**Efficiency-report leftovers, finally closed out**
+- [x] Backup status -- whether File History is actually configured.
+      There's no clean, unelevated way to get its last-success timestamp,
+      so this honestly reports only the checkable thing (on or off), not
+      a guessed date.
+- [x] BIOS version display (informational only, same spirit as driver
+      version -- "what's installed," not "is something newer available"
+      yet) -- new "System" card in Tune-up.
+- [x] Disk cleanup -- scan-then-confirm, same click-to-apply pattern as
+      every other fix in Matrix. Deliberately scoped to just `%TEMP%`
+      (Windows' own "Temporary files" Disk Cleanup category) -- Recycle
+      Bin and Windows Update Cleanup need elevation or more complex APIs,
+      left for later rather than building against a worse-understood
+      interface this batch.
+  - CPU temperature monitoring: explicitly NOT doing this. Reading it
+    reliably means giving Matrix (or a helper) admin rights it doesn't
+    otherwise need -- a real architecture tradeoff Rob decided isn't
+    worth crossing. Don't revisit without him raising it again.
+
+**Testing note:** everything above was checked for correctness the ways
+this sandbox allows -- every changed Python file compiles clean, every
+changed JS file passes a syntax check, and the new parsing logic
+(`wifi_security()`, `dns_servers()`, the startup-persistence path check)
+was run against realistic sample command output with known expected
+results, not just read over. What's NOT verified: actual behavior on
+Rob's real Windows machine -- the PowerShell calls, the mode-switch apps
+actually closing, the wake-log surviving a real sleep/resume cycle, and
+how the new UI pieces look on a real screen. Flag anything that looks off
+once this is running for real.
 
 - Carried over from 0.10: Do Not Disturb for Modes has no reliable public API on
   current Windows, so it was left out; Armoury Crate's Silent / Performance / Turbo

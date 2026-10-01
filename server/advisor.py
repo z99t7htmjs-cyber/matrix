@@ -140,6 +140,143 @@ def account_rules(state):
     return out
 
 
+def admin_accounts_rules(state):
+    """0.12: who has admin rights on this PC -- a common blind spot, not necessarily a
+    problem. Only speaks up above two accounts (you, plus one reasonable extra); below
+    that there's nothing worth a card for."""
+    health = state["health"]
+    accounts = health.get("adminAccounts")
+    if accounts is None or len(accounts) <= 2:
+        return []
+    names = ", ".join(accounts)
+    return [suggestion("admin-accounts", "security", "fyi", f"{len(accounts)} accounts have admin rights",
+                       f"{names}. Worth a glance if that's more than you expect -- an old shared-setup account, "
+                       "for instance.",
+                       ["Open Settings → Accounts → Other users and review who's listed.",
+                        "Remove admin rights from any account that doesn't need them."],
+                       check="health", kind="choice")]
+
+
+def shares_rules(state):
+    """0.12: actual file/folder shares this PC is offering on the network -- not just
+    listening ports (which "Exposed to your network" already covers)."""
+    health = state["health"]
+    shares = health.get("shares")
+    if not shares:
+        return []
+    names = ", ".join(s["name"] for s in shares)
+    return [suggestion("network-shares", "security", "fyi", f"Sharing {len(shares)} folder(s) on the network",
+                       f"{names}. Fine if that's intentional -- worth checking if it's not something you remember turning on.",
+                       ["Open Control Panel → Network and Sharing Center → Advanced sharing settings to review."],
+                       check="health", kind="choice")]
+
+
+def hosts_file_rules(state):
+    """0.12: the hosts file is a classic malware target for quietly redirecting where a
+    site actually goes. Matrix can't judge which entries are legitimate (some people add
+    their own on purpose), so this only flags that something's there beyond the stock
+    commented-out template -- never which lines, never claims to know if it's bad."""
+    health = state["health"]
+    hosts = health.get("hostsFile")
+    if not hosts or not hosts.get("activeLines"):
+        return []
+    return [suggestion("hosts-file", "security", "fyi",
+                       f"The hosts file has {hosts['activeLines']} active entr{'y' if hosts['activeLines'] == 1 else 'ies'}",
+                       "Windows ships this file empty (just commented-out examples). Active entries redirect where "
+                       "a site actually goes -- normal if you (or a program you trust) added them on purpose, worth "
+                       "checking if you don't recognize them.",
+                       ["Open `%WINDIR%\\System32\\drivers\\etc\\hosts` in Notepad (as administrator) to review it."],
+                       check="health", kind="choice")]
+
+
+def network_profile_rules(state):
+    """0.12: Public vs Private/Home network category, brought back with a real purpose --
+    flag being on "Public" on what's actually trusted home Wi-Fi (file sharing/discovery
+    stays off unnecessarily), or "Private" on a network that isn't home (the opposite
+    problem: this PC is more discoverable than it should be somewhere unfamiliar)."""
+    health = state["health"]
+    profiles = health.get("networkProfiles") or []
+    away = state["meta"].get("awayFromHome")
+    home_known = state["meta"].get("homeKnown")
+    if not profiles or away is None:
+        return []
+    out = []
+    for p in profiles:
+        category = (p.get("category") or "").lower()
+        if not away and home_known and category == "public":
+            out.append(suggestion("network-profile-public-home", "security", "fyi",
+                                  f'"{p["name"]}" is marked Public, but this looks like home',
+                                  "On a Public profile, Windows hides this PC from other devices and turns off "
+                                  "sharing -- usually fine, but worth switching to Private if you want file "
+                                  "sharing or device discovery to work here.",
+                                  ["Open Settings → Network & internet → Wi-Fi, select this network, and set it to Private."],
+                                  check="health", kind="choice", fingerprint=f"network-profile-public-home-{p['name']}"))
+        elif away and category == "private":
+            out.append(suggestion("network-profile-private-away", "security", "attention",
+                                  f'"{p["name"]}" is marked Private, but this isn\'t home',
+                                  "On a Private profile this PC is more discoverable to other devices on the "
+                                  "network than it needs to be somewhere unfamiliar.",
+                                  ["Open Settings → Network & internet → Wi-Fi, select this network, and set it to Public."],
+                                  check="health", kind="choice", fingerprint=f"network-profile-private-away-{p['name']}"))
+    return out
+
+
+def backup_rules(state):
+    """0.12: is backup actually configured. There's no clean, unelevated way to get File
+    History's last-success time, so this only reports the honestly checkable thing --
+    whether it's turned on at all -- rather than guessing at a timestamp."""
+    health = state["health"]
+    backup = health.get("backup")
+    if backup is None or backup.get("fileHistoryConfigured"):
+        return []
+    return [suggestion("backup-not-configured", "maintenance", "fyi", "File History isn't set up",
+                       "No backup is configured through Windows' own File History. OneDrive or a third-party "
+                       "backup may already be covering this -- Matrix only knows about File History specifically.",
+                       ["Open Settings → Update & Security → Backup to set up File History with an external drive."],
+                       check="health", kind="choice")]
+
+
+def startup_persistence_rules(state):
+    """0.12: a security-framed pass over startup entries, separate from Tune-up's "these
+    slow your boot" view (startup_rules, below). Tune-up only counts how many there are;
+    this looks at *where each one runs from* for the pattern real malware persistence
+    actually uses -- hiding in a temp or roaming-profile folder instead of a normal
+    install location, so it survives reboots without showing up as "installed" anywhere
+    obvious. Matrix can't tell a snuck-in entry from a legitimate one by itself (plenty of
+    real apps install helpers into AppData on purpose), so this only flags the pattern as
+    worth a look -- never states anything is actually malicious."""
+    tuneup = state.get("tuneup") or {}
+    items = tuneup.get("startup")
+    if items is None:
+        return []
+    suspicious = []
+    for item in items:
+        command = (item.get("command") or "").lower()
+        if not command:
+            continue
+        if "\\appdata\\local\\temp\\" in command or "\\windows\\temp\\" in command:
+            suspicious.append(item["name"])
+        elif "\\appdata\\roaming\\" in command:
+            # Flag only when the exe sits loose directly under Roaming with no vendor
+            # subfolder at all -- that shape is what persistence tends to look like; a
+            # normal install is one folder deeper (\Roaming\SomeApp\app.exe), which this
+            # deliberately leaves alone.
+            after = command.split("\\appdata\\roaming\\", 1)[1]
+            if "\\" not in after:
+                suspicious.append(item["name"])
+    if not suspicious:
+        return []
+    names = ", ".join(suspicious)
+    return [suggestion("startup-persistence", "security", "attention",
+                       f"{len(suspicious)} startup item{'s' if len(suspicious) > 1 else ''} run{'s' if len(suspicious) == 1 else ''} from an unusual folder",
+                       f"{names}. Running from a temp or roaming folder (rather than a normal install location) is "
+                       "the pattern real persistence malware uses, but plenty of legitimate helper apps install "
+                       "there too -- this isn't a verdict, just worth a look if you don't recognize the name.",
+                       ["Open the Tune-up view's \"Starts with Windows\" list to see the full path.",
+                        "If you don't recognize it, search the exact file name online before removing anything."],
+                       check="tuneup", kind="choice", fingerprint=",".join(sorted(suspicious)))]
+
+
 # --- maintenance ------------------------------------------------------------------------
 
 def update_rules(state):
@@ -589,6 +726,8 @@ def update_check_rules(state):
 
 RULES = [
     setup_rules, stability_rules, network_rules, defender_rules, firewall_rules, account_rules,
+    admin_accounts_rules, shares_rules, hosts_file_rules, network_profile_rules, backup_rules,
+    startup_persistence_rules,
     update_rules, disk_rules, drive_rules, thermal_rules, load_rules, startup_rules, uptime_rules, tuneup_rules,
     driver_rules, update_check_rules,
 ]
@@ -607,6 +746,7 @@ ACTIONS = {
     "reboot-pending": {"label": "Open Windows Update", "open": "windowsupdate"},
     "update-available": {"label": "Open Matrix on GitHub", "open": "matrix-update"},
     "startup-apps": {"label": "Open Startup apps", "open": "startupapps"},
+    "startup-persistence": {"label": "See in Tune-up", "view": "tuneup"},
     "cpu-high": {"label": "Open Task Manager", "open": "taskmanager"},
     "memory-high": {"label": "Open Task Manager", "open": "taskmanager"},
     "crashes": {"label": "See crash history", "view": "events"},
@@ -621,6 +761,11 @@ ACTIONS = {
     "unknown-devices": {"label": "Go to Network", "view": "network"},
     "new-devices": {"label": "Go to Network", "view": "network"},
     "unconfirmed-devices": {"label": "Go to Network", "view": "network"},
+    "admin-accounts": {"label": "Open Accounts settings", "open": "accounts"},
+    "network-shares": {"label": "Open Sharing settings", "open": "sharing"},
+    "network-profile-public-home": {"label": "Open Wi-Fi settings", "open": "wifi"},
+    "network-profile-private-away": {"label": "Open Wi-Fi settings", "open": "wifi"},
+    "backup-not-configured": {"label": "Open Backup settings", "open": "backup"},
 }
 
 
